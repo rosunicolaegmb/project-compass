@@ -204,7 +204,7 @@ export default function Timesheets() {
 
   // Summary stats
   const totalHours = filtered.reduce((s: number, t: any) => s + Number(t.hours || 0), 0);
-  // For full-time, deduplicate by resource/month so overhead+monthly_cost is counted once
+  // For full-time, deduplicate by resource/month so monthly_cost is counted once
   const totalCost = useMemo(() => {
     let sum = 0;
     const seenFullTime = new Set<string>();

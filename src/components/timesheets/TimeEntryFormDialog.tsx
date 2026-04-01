@@ -46,7 +46,7 @@ interface TimeEntryFormDialogProps {
   reporterResourceId?: string | null;
 }
 
-export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, projects, phases }: TimeEntryFormDialogProps) {
+export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, projects, phases, reporterResourceId }: TimeEntryFormDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!entry;
 

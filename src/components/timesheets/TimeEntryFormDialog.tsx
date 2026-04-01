@@ -79,12 +79,12 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
       });
     } else {
       form.reset({
-        resource_id: "", project_id: "", phase_id: "",
+        resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         entry_date: new Date().toISOString().split("T")[0],
         hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
       });
     }
-  }, [entry, form, open]);
+  }, [entry, form, open, reporterResourceId]);
 
   // Auto-fill rates and currency when resource changes
   const watchResourceId = form.watch("resource_id");

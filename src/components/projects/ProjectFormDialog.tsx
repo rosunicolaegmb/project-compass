@@ -228,7 +228,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
           </div>
 
           {/* Row 5: Budgets */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Total Contract Value</Label>
               <Input type="number" step="0.01" value={form.total_budget} onChange={(e) => update("total_budget", e.target.value)} placeholder="0.00" />
@@ -236,10 +236,6 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
             <div className="space-y-1.5">
               <Label>Planned Budget</Label>
               <Input type="number" step="0.01" value={form.planned_budget} onChange={(e) => update("planned_budget", e.target.value)} placeholder="0.00" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Revised Budget</Label>
-              <Input type="number" step="0.01" value={form.revised_budget} onChange={(e) => update("revised_budget", e.target.value)} placeholder="0.00" />
             </div>
           </div>
 

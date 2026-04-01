@@ -161,7 +161,7 @@ export default function Reports() {
       const pExp = filteredExpenses.filter((e: any) => e.project_id === p.id);
       const actualCost = pTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0) + pExp.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
       const actualRevenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
-      const budget = Number(p.revised_budget || p.planned_budget || p.total_budget || 0);
+      const budget = Number(p.planned_budget || p.total_budget || 0);
       const variance = budget - actualCost;
       return { name: p.name, budget, actualCost, actualRevenue, variance, type: p.project_type };
     }).sort((a, b) => a.variance - b.variance);

@@ -228,7 +228,7 @@ export default function ProjectDetail() {
     projectType: project.project_type as "time_and_materials" | "fixed_price",
     totalBudget: Number(project.total_budget || 0),
     plannedBudget: Number(project.planned_budget || project.total_budget || 0),
-    revisedBudget: Number(project.revised_budget || project.planned_budget || project.total_budget || 0),
+    revisedBudget: Number(project.planned_budget || project.total_budget || 0),
     plannedHours: phases.reduce((s: number, p: any) => s + Number(p.budget_hours || 0), 0),
     plannedCost: phases.reduce((s: number, p: any) => s + Number(p.budget_amount || 0), 0),
     timeEntries: timeEntries.map((t: any) => ({

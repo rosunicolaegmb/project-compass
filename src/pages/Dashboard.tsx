@@ -123,7 +123,6 @@ export default function Dashboard() {
 
     // Budget totals
     const totalPlannedBudget = projects.reduce((s: number, p: any) => s + Number(p.planned_budget || p.total_budget || 0), 0);
-    const totalRevisedBudget = projects.reduce((s: number, p: any) => s + Number(p.revised_budget || p.planned_budget || p.total_budget || 0), 0);
 
     // Actuals
     const totalActualCost = filteredTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)

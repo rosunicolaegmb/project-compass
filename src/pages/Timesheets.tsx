@@ -225,11 +225,30 @@ export default function Timesheets() {
       <PageHeader
         title="Timesheets"
         description="Track and approve time entries"
-        actions={canEdit ? (
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Log Time
-          </Button>
-        ) : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => {
+                const rows = filtered.map((t: any) => [
+                  t.entry_date, (t.resources as any)?.display_name || "", (t.projects as any)?.name || "",
+                  (t.project_phases as any)?.name || "", t.hours, t.is_billable ? "Yes" : "No",
+                  Number(t.hours || 0) * Number(t.cost_rate || 0),
+                  t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0,
+                  t.approval_status,
+                ]);
+                exportToCsv("timesheets.csv", ["Date", "Resource", "Project", "Phase", "Hours", "Billable", "Cost", "Revenue", "Status"], rows);
+                toast.success("Exported timesheets to CSV");
+              }}>
+                <Download className="h-4 w-4 mr-1" />Export
+              </Button>
+            )}
+            {canEdit && (
+              <Button size="sm" onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Log Time
+              </Button>
+            )}
+          </div>
+        }
       />
 
       {/* Summary Bar */}

@@ -440,9 +440,9 @@ export default function Timesheets() {
                   </TableRow>
                 ) : (
                   filtered.map((t: any) => {
-                    const monthKey = `${t.resource_id}-${t.entry_date?.substring(0, 7)}`;
-                    const costData = costMap.get(monthKey);
-                    const monthlyCost = costData?.monthlyCost ?? 0;
+                    const entryCost = getEntryCost(t);
+                    const empType = (t.resources as any)?.employment_type;
+                    const isMonthly = empType === "full_time" || empType === "part_time";
                     const rev = t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0;
                     return (
                       <TableRow key={t.id} className="border-border hover:bg-muted/50">
@@ -457,8 +457,8 @@ export default function Timesheets() {
                         <TableCell className="text-muted-foreground">{(t.project_phases as any)?.name || "—"}</TableCell>
                         <TableCell className="text-right font-medium">{t.hours}</TableCell>
                         <TableCell className="text-right">
-                          <span title="Monthly total: base cost + overhead">{fmt(monthlyCost)}</span>
-                          <span className="block text-[10px] text-muted-foreground">monthly</span>
+                          <span title={isMonthly ? "Monthly: base + overhead" : `Daily: rate × ${t.hours}h + overhead`}>{fmt(entryCost)}</span>
+                          <span className="block text-[10px] text-muted-foreground">{isMonthly ? "monthly" : "daily"}</span>
                         </TableCell>
                         <TableCell className="text-right">{fmt(rev)}</TableCell>
                         <TableCell>

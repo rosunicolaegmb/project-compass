@@ -151,7 +151,6 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
           is_billable: values.is_billable,
           description: values.description || null,
           bill_rate: values.bill_rate || null,
-          cost_rate: values.cost_rate || null,
           currency: values.currency,
         }));
 

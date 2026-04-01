@@ -154,7 +154,7 @@ export default function AuthPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
-                    <Input id="signup-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" />
+                    <Input id="signup-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" defaultValue={prefilledEmail} readOnly={!!prefilledEmail} className={prefilledEmail ? "bg-muted" : ""} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>

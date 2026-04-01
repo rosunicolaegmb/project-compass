@@ -83,14 +83,23 @@ export default function Resources() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["resources"] });
-      toast.success(data?.message || "Invitation sent successfully!");
       setInviting(null);
+      setSignupLink(data.signup_link);
+      setCopied(false);
     },
     onError: (err: Error) => {
-      toast.error(`Failed to send invitation: ${err.message}`);
+      toast.error(`Failed to generate invite link: ${err.message}`);
       setInviting(null);
     },
   });
+
+  const handleCopyLink = async () => {
+    if (!signupLink) return;
+    await navigator.clipboard.writeText(signupLink);
+    setCopied(true);
+    toast.success("Link copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const filtered = resources.filter((r: any) => {
     const q = search.toLowerCase();

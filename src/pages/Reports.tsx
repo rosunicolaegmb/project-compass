@@ -84,7 +84,7 @@ export default function Reports() {
     queryKey: ["rpt-expenses"],
     queryFn: async () => {
       const { data, error } = await supabase.from("expense_entries")
-        .select("amount, project_id, phase_id, expense_date, resource_id")
+        .select("amount, project_id, phase_id, expense_date, resource_id, currency")
         .is("deleted_at", null);
       if (error) throw error;
       return data;

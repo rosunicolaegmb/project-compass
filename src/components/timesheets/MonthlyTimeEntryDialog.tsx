@@ -255,14 +255,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="cost_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cost Rate ({sym}/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+            <div className="grid grid-cols-1 gap-4">
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Bill Rate ({sym}/hr)</FormLabel>

@@ -45,11 +45,12 @@ export default function Timesheets() {
   const queryClient = useQueryClient();
 
   const [view, setView] = useState<"daily" | "weekly">("daily");
-  const [search, setSearch] = useState("");
-  const [filterResource, setFilterResource] = useState("all");
-  const [filterProject, setFilterProject] = useState("all");
-  const [filterPhase, setFilterPhase] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const saved = loadFilters("timesheets");
+  const [search, setSearch] = useState(saved.search || "");
+  const [filterResource, setFilterResource] = useState(saved.resource || "all");
+  const [filterProject, setFilterProject] = useState(saved.project || "all");
+  const [filterPhase, setFilterPhase] = useState(saved.phase || "all");
+  const [filterStatus, setFilterStatus] = useState(saved.status || "all");
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 

@@ -108,7 +108,7 @@ export default function AuthPage() {
         </div>
 
         <Card>
-          <Tabs defaultValue="login" onValueChange={() => { setError(null); setSuccess(null); }}>
+          <Tabs defaultValue={defaultTab} onValueChange={() => { setError(null); setSuccess(null); }}>
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Sign In</TabsTrigger>

@@ -122,8 +122,9 @@ export default function Resources() {
               <TableHead>Role</TableHead>
               <TableHead className="hidden lg:table-cell">Department</TableHead>
               <TableHead className="hidden sm:table-cell">Type</TableHead>
-              <TableHead className="text-right">Cost Rate</TableHead>
+              <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">Bill Rate</TableHead>
+              <TableHead className="text-right hidden lg:table-cell">Overhead (€)</TableHead>
               <TableHead>Status</TableHead>
               {canEdit && <TableHead className="w-20">Actions</TableHead>}
             </TableRow>

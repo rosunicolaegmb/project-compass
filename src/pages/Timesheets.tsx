@@ -430,7 +430,7 @@ export default function Timesheets() {
 
         {/* WEEKLY VIEW */}
         <TabsContent value="weekly">
-          <div className="data-table-container">
+          <div className="rounded-lg border bg-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">

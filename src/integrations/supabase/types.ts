@@ -134,6 +134,39 @@ export type Database = {
         }
         Relationships: []
       }
+      currency_conversion_rates: {
+        Row: {
+          created_at: string
+          from_currency: string
+          id: string
+          month: number
+          rate: number
+          to_currency: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          from_currency?: string
+          id?: string
+          month: number
+          rate?: number
+          to_currency?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          from_currency?: string
+          id?: string
+          month?: number
+          rate?: number
+          to_currency?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       delivery_roles: {
         Row: {
           created_at: string

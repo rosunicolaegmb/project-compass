@@ -30,7 +30,7 @@ const schema = z.object({
   is_billable: z.boolean().default(true),
   description: z.string().max(500).optional(),
   bill_rate: z.coerce.number().min(0).optional(),
-  cost_rate: z.coerce.number().min(0).optional(),
+  
   currency: z.string().default("EUR"),
 });
 

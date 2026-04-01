@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TimeEntryFormDialog } from "@/components/timesheets/TimeEntryFormDialog";
+import { MonthlyTimeEntryDialog } from "@/components/timesheets/MonthlyTimeEntryDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { saveFilters, loadFilters } from "@/lib/filters";
 import { exportToCsv } from "@/lib/csv-export";

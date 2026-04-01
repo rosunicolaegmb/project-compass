@@ -186,7 +186,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
                   <SelectItem value="on_hold">On Hold</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="sow_expired">SOW Expired</SelectItem>
                 </SelectContent>
               </Select>
             </div>

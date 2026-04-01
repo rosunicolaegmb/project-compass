@@ -17,6 +17,7 @@ import Timesheets from "./pages/Timesheets";
 import Expenses from "./pages/Expenses";
 import Forecasting from "./pages/Forecasting";
 import Reports from "./pages/Reports";
+import ProjectDetail from "./pages/ProjectDetail";
 import AuditLog from "./pages/AuditLog";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";

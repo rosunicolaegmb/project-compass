@@ -32,6 +32,7 @@ const CHART_COLORS = [
 
 export default function Reports() {
   useEffect(() => { loadConversionRates(); }, []);
+  // --- Filters ---
   const [filterClient, setFilterClient] = useState("all");
   const [filterPM, setFilterPM] = useState("all");
   const [filterType, setFilterType] = useState("all");

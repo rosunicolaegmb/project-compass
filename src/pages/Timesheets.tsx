@@ -79,7 +79,7 @@ export default function Timesheets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("time_entries")
-        .select("*, resources(display_name), projects(name), project_phases(name)")
+        .select("*, resources(display_name, employment_type, monthly_cost, overhead_cost_eur, default_cost_rate), projects(name), project_phases(name)")
         .is("deleted_at", null)
         .gte("entry_date", dateRangeStart)
         .lte("entry_date", dateRangeEnd)

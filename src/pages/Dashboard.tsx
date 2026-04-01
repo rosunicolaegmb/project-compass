@@ -230,6 +230,11 @@ export default function Dashboard() {
     </div>
   );
 
+  // Reporters should not see dashboard data — redirect to timesheets
+  if (isReporter) {
+    return <Navigate to="/timesheets" replace />;
+  }
+
   return (
     <div className="page-container">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

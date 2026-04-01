@@ -28,6 +28,8 @@ const projectSchema = z.object({
   pm_resource_id: z.string().optional().or(z.literal("")),
   revenue_model: z.string().trim().max(100).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  default_bill_rate: z.string().optional().or(z.literal("")),
+  default_cost_rate: z.string().optional().or(z.literal("")),
 });
 
 interface ProjectFormDialogProps {

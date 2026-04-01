@@ -49,9 +49,10 @@ interface MonthlyTimeEntryDialogProps {
   resources: any[];
   projects: any[];
   phases: any[];
+  reporterResourceId?: string | null;
 }
 
-export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects, phases }: MonthlyTimeEntryDialogProps) {
+export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects, phases, reporterResourceId }: MonthlyTimeEntryDialogProps) {
   const queryClient = useQueryClient();
 
   const form = useForm<FormData>({

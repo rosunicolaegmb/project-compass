@@ -188,19 +188,17 @@ export default function Timesheets() {
 
   // Cost calculation helper: groups by resource_id + month
   // Per-entry cost calculation helper
-  // Full-time: monthly_cost + overhead (same for all entries in that resource/month)
-  // Contractor: (default_cost_rate × entry hours_per_day) + overhead (per entry)
+  // Full-time: monthly_cost (same for all entries in that resource/month)
+  // Contractor: default_cost_rate × entry hours_per_day
   const getEntryCost = (entry: any) => {
     const resource = entry.resources;
     const empType = resource?.employment_type;
-    const overhead = Number(resource?.overhead_cost_eur ?? 0);
     if (empType === "full_time" || empType === "part_time") {
-      const monthlyCostVal = Number(resource?.monthly_cost ?? 0);
-      return monthlyCostVal + overhead;
+      return Number(resource?.monthly_cost ?? 0);
     } else {
       const costRate = Number(resource?.default_cost_rate ?? 0);
       const hoursPerDay = Number(entry.hours || 0);
-      return (costRate * hoursPerDay) + overhead;
+      return costRate * hoursPerDay;
     }
   };
 

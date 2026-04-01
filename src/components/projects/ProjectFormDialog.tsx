@@ -66,7 +66,6 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         end_date: project.end_date || "",
         total_budget: project.total_budget != null ? String(project.total_budget) : "",
         planned_budget: project.planned_budget != null ? String(project.planned_budget) : "",
-        revised_budget: project.revised_budget != null ? String(project.revised_budget) : "",
         currency: project.currency || "USD",
         pm_resource_id: project.pm_resource_id || "",
         revenue_model: project.revenue_model || "",

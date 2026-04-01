@@ -438,7 +438,9 @@ export default function Timesheets() {
                   </TableRow>
                 ) : (
                   filtered.map((t: any) => {
-                    const cost = Number(t.hours || 0) * Number(t.cost_rate || 0);
+                    const monthKey = `${t.resource_id}-${t.entry_date?.substring(0, 7)}`;
+                    const costData = costMap.get(monthKey);
+                    const monthlyCost = costData?.monthlyCost ?? 0;
                     const rev = t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0;
                     return (
                       <TableRow key={t.id} className="border-border hover:bg-muted/50">
@@ -452,7 +454,10 @@ export default function Timesheets() {
                         <TableCell>{(t.projects as any)?.name || "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{(t.project_phases as any)?.name || "—"}</TableCell>
                         <TableCell className="text-right font-medium">{t.hours}</TableCell>
-                        <TableCell className="text-right">{fmt(cost)}</TableCell>
+                        <TableCell className="text-right">
+                          <span title="Monthly total: base cost + overhead">{fmt(monthlyCost)}</span>
+                          <span className="block text-[10px] text-muted-foreground">monthly</span>
+                        </TableCell>
                         <TableCell className="text-right">{fmt(rev)}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">{t.is_billable ? "Yes" : "No"}</Badge>

@@ -1021,6 +1021,9 @@ export type Database = {
         | "training"
         | "meals"
         | "other"
+        | "subcontractor"
+        | "operational"
+        | "hardware"
       phase_status: "planned" | "active" | "completed" | "on_hold"
       project_status:
         | "draft"
@@ -1168,6 +1171,9 @@ export const Constants = {
         "training",
         "meals",
         "other",
+        "subcontractor",
+        "operational",
+        "hardware",
       ],
       phase_status: ["planned", "active", "completed", "on_hold"],
       project_status: [

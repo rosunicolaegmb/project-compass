@@ -159,8 +159,11 @@ export default function Resources() {
                       {EMPLOYMENT_LABELS[r.employment_type] || r.employment_type || "—"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtRate(r.default_cost_rate)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {r.employment_type === "full_time" ? fmtMonthly(r.monthly_cost) : fmtRate(r.default_cost_rate)}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtRate(r.default_bill_rate)}</TableCell>
+                  <TableCell className="text-right tabular-nums hidden lg:table-cell">{fmtMonthly(r.overhead_cost_eur, "€")}</TableCell>
                   <TableCell><StatusBadge status={r.is_active ? "active" : "archived"} /></TableCell>
                   {canEdit && (
                     <TableCell>

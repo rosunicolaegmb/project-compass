@@ -216,6 +216,22 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         throw new Error("Please fix allocation errors before saving");
       }
 
+      // Check for duplicate email
+      if (values.email) {
+        const query = supabase
+          .from("resources")
+          .select("id")
+          .eq("email", values.email.toLowerCase())
+          .is("deleted_at", null);
+        if (isEditing) {
+          query.neq("id", resource.id);
+        }
+        const { data: dups } = await query;
+        if (dups && dups.length > 0) {
+          throw new Error(`A resource with email "${values.email}" already exists.`);
+        }
+      }
+
       const payload: any = {
         display_name: values.display_name,
         email: values.email || null,

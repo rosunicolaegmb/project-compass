@@ -74,8 +74,8 @@ export function toEur(
 ): number {
   if (!amount) return 0;
   if (currency === "EUR") return amount;
-  if (currency === "GBP") {
-    return amount * getGbpToEurRate(entryDate);
+  if (currency === "GBP" || currency === "RON") {
+    return amount * getToEurRate(currency, entryDate);
   }
   // Unknown currency — treat as EUR (legacy fallback)
   return amount;

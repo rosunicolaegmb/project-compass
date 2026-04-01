@@ -71,7 +71,7 @@ export default function Resources() {
       const { data, error } = await supabase.functions.invoke("invite-resource", {
         body: {
           resource_id: resource.id,
-          redirect_url: window.location.origin + "/auth",
+          redirect_url: window.location.origin,
         },
       });
       if (error) throw error;

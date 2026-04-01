@@ -203,7 +203,7 @@ export default function Dashboard() {
     ];
 
     return {
-      totalPlannedBudget, totalRevisedBudget, totalActualCost, totalForecastCost,
+      totalPlannedBudget, totalActualCost, totalForecastCost,
       totalActualRevenue, totalForecastRevenue, grossMargin,
       activeCount: activeProjects.length,
       overBudgetProjects, atRiskProjects, missingTimesheets,

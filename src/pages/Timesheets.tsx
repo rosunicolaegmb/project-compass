@@ -56,6 +56,7 @@ export default function Timesheets() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showMonthly, setShowMonthly] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

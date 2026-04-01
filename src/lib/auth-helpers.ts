@@ -88,7 +88,7 @@ export const PERMISSIONS = {
   phases: { view: ["admin", "office_admin", "pm", "executive_viewer"] as AppRole[], edit: ["admin", "pm"] as AppRole[] },
   resources: { view: ["admin", "office_admin", "pm", "executive_viewer"] as AppRole[], edit: ["admin", "office_admin"] as AppRole[] },
   rates: { view: ["admin", "office_admin", "pm", "executive_viewer"] as AppRole[], edit: ["admin", "office_admin"] as AppRole[] },
-  timesheets: { view: ["admin", "office_admin", "pm"] as AppRole[], edit: ["admin", "office_admin", "pm"] as AppRole[] },
+  timesheets: { view: ["admin", "office_admin", "pm", "reporter"] as AppRole[], edit: ["admin", "office_admin", "pm", "reporter"] as AppRole[] },
   expenses: { view: ["admin", "office_admin", "pm"] as AppRole[], edit: ["admin", "office_admin", "pm"] as AppRole[] },
   forecasting: { view: ["admin", "pm", "executive_viewer"] as AppRole[], edit: ["admin", "pm"] as AppRole[] },
   reports: { view: ["admin", "office_admin", "pm", "executive_viewer"] as AppRole[], edit: [] as AppRole[] },

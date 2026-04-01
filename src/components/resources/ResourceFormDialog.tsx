@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -17,12 +17,18 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
+import { Plus, Trash2, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const schema = z.object({
   display_name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Valid email required").or(z.literal("")).optional(),
+  email: z.string().min(1, "Email is required").email("Valid email required"),
   job_title: z.string().optional(),
   department: z.string().optional(),
   employee_id: z.string().optional(),
@@ -40,6 +46,15 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+interface Allocation {
+  id?: string;
+  project_id: string;
+  allocation_percentage: number;
+  start_date: string;
+  end_date: string;
+  isNew?: boolean;
+}
+
 interface ResourceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +65,9 @@ interface ResourceFormDialogProps {
 export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles }: ResourceFormDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!resource;
+  const [allocOpen, setAllocOpen] = useState(false);
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [allocErrors, setAllocErrors] = useState<Record<number, string>>({});
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -60,6 +78,37 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
       cost_rate_currency: "EUR", bill_rate_currency: "EUR",
       hire_date: "", is_active: true,
     },
+  });
+
+  // Fetch projects for allocation
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects-for-allocation"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name, start_date, end_date, status")
+        .is("deleted_at", null)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  // Fetch existing allocations when editing
+  const { data: existingAllocations = [] } = useQuery({
+    queryKey: ["resource-allocations", resource?.id],
+    queryFn: async () => {
+      if (!resource?.id) return [];
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("id, project_id, allocation_percentage, start_date, end_date, projects(name, start_date, end_date)")
+        .eq("resource_id", resource.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && isEditing,
   });
 
   useEffect(() => {
@@ -90,10 +139,83 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         hire_date: "", is_active: true,
       });
     }
+    setAllocErrors({});
   }, [resource, form, open]);
+
+  // Sync existing allocations
+  useEffect(() => {
+    if (isEditing && existingAllocations.length > 0) {
+      setAllocations(existingAllocations.map((a: any) => ({
+        id: a.id,
+        project_id: a.project_id,
+        allocation_percentage: Number(a.allocation_percentage || 100),
+        start_date: a.start_date || "",
+        end_date: a.end_date || "",
+      })));
+    } else if (!isEditing) {
+      setAllocations([]);
+    }
+  }, [existingAllocations, isEditing, open]);
+
+  const addAllocation = () => {
+    setAllocations(prev => [...prev, {
+      project_id: "", allocation_percentage: 100, start_date: "", end_date: "", isNew: true,
+    }]);
+    setAllocOpen(true);
+  };
+
+  const removeAllocation = (index: number) => {
+    setAllocations(prev => prev.filter((_, i) => i !== index));
+    setAllocErrors(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const updateAllocation = (index: number, field: keyof Allocation, value: any) => {
+    setAllocations(prev => prev.map((a, i) => i === index ? { ...a, [field]: value } : a));
+    // Clear error on change
+    setAllocErrors(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const validateAllocations = (): boolean => {
+    const errors: Record<number, string> = {};
+    allocations.forEach((alloc, i) => {
+      if (!alloc.project_id) {
+        errors[i] = "Please select a project";
+        return;
+      }
+      const project = projects.find((p: any) => p.id === alloc.project_id);
+      if (!project) return;
+
+      if (alloc.start_date && project.start_date && alloc.start_date < project.start_date) {
+        errors[i] = `Start date is before project start (${project.start_date})`;
+        return;
+      }
+      if (alloc.end_date && project.end_date && alloc.end_date > project.end_date) {
+        errors[i] = `End date is after project end (${project.end_date})`;
+        return;
+      }
+      if (alloc.start_date && alloc.end_date && alloc.start_date > alloc.end_date) {
+        errors[i] = "Start date must be before end date";
+        return;
+      }
+    });
+    setAllocErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
+      if (!validateAllocations()) {
+        throw new Error("Please fix allocation errors before saving");
+      }
+
       const payload: any = {
         display_name: values.display_name,
         email: values.email || null,
@@ -108,21 +230,65 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         overhead_cost_eur: values.overhead_cost_eur || null,
         cost_rate_currency: values.cost_rate_currency,
         bill_rate_currency: values.bill_rate_currency,
-        currency: values.bill_rate_currency, // keep legacy column in sync
+        currency: values.bill_rate_currency,
         hire_date: values.hire_date || null,
         is_active: values.is_active,
       };
 
+      let resourceId: string;
+
       if (isEditing) {
         const { error } = await supabase.from("resources").update(payload).eq("id", resource.id);
         if (error) throw error;
+        resourceId = resource.id;
       } else {
-        const { error } = await supabase.from("resources").insert(payload);
+        const { data, error } = await supabase.from("resources").insert(payload).select("id").single();
+        if (error) throw error;
+        resourceId = data.id;
+      }
+
+      // Sync allocations
+      if (isEditing) {
+        // Delete removed allocations
+        const keepIds = allocations.filter(a => a.id).map(a => a.id!);
+        const existingIds = existingAllocations.map((a: any) => a.id);
+        const toDelete = existingIds.filter((id: string) => !keepIds.includes(id));
+        if (toDelete.length > 0) {
+          const { error } = await supabase.from("project_members").delete().in("id", toDelete);
+          if (error) throw error;
+        }
+
+        // Update existing
+        for (const alloc of allocations.filter(a => a.id)) {
+          const { error } = await supabase.from("project_members").update({
+            project_id: alloc.project_id,
+            allocation_percentage: alloc.allocation_percentage,
+            start_date: alloc.start_date || null,
+            end_date: alloc.end_date || null,
+          }).eq("id", alloc.id!);
+          if (error) throw error;
+        }
+      }
+
+      // Insert new allocations
+      const newAllocs = allocations.filter(a => !a.id && a.project_id);
+      if (newAllocs.length > 0) {
+        const { error } = await supabase.from("project_members").insert(
+          newAllocs.map(a => ({
+            resource_id: resourceId,
+            project_id: a.project_id,
+            allocation_percentage: a.allocation_percentage,
+            start_date: a.start_date || null,
+            end_date: a.end_date || null,
+          }))
+        );
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["resource-allocations"] });
+      queryClient.invalidateQueries({ queryKey: ["project-members"] });
       toast.success(isEditing ? "Resource updated" : "Resource created");
       onOpenChange(false);
     },
@@ -140,9 +306,13 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
   const costSym = CURRENCY_SYMBOLS[costCurrency as Currency] || "€";
   const billSym = CURRENCY_SYMBOLS[billCurrency as Currency] || "€";
 
+  // Projects not yet allocated
+  const allocatedProjectIds = new Set(allocations.map(a => a.project_id));
+  const availableProjects = projects.filter((p: any) => !allocatedProjectIds.has(p.id));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Resource" : "New Resource"}</DialogTitle>
         </DialogHeader>
@@ -158,7 +328,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email *</FormLabel>
                   <FormControl><Input type="email" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -301,6 +471,107 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                 </FormControl>
               </FormItem>
             )} />
+
+            {/* Project Allocations Section */}
+            <Collapsible open={allocOpen} onOpenChange={setAllocOpen}>
+              <div className="border rounded-lg">
+                <CollapsibleTrigger asChild>
+                  <button type="button" className="flex items-center justify-between w-full p-3 text-sm font-medium hover:bg-muted/50 transition-colors rounded-t-lg">
+                    <div className="flex items-center gap-2">
+                      {allocOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      Project Allocations
+                      {allocations.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">{allocations.length}</Badge>
+                      )}
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); addAllocation(); }}>
+                      <Plus className="h-3 w-3 mr-1" /> Add
+                    </Button>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  {allocations.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      No project allocations yet. Click "Add" to allocate this resource to a project.
+                    </div>
+                  ) : (
+                    <div className="p-3 space-y-3">
+                      {allocations.map((alloc, i) => {
+                        const project = projects.find((p: any) => p.id === alloc.project_id);
+                        return (
+                          <div key={i} className="border rounded-md p-3 space-y-2 bg-muted/30">
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={alloc.project_id}
+                                onValueChange={(v) => {
+                                  updateAllocation(i, "project_id", v);
+                                  // Auto-fill project dates
+                                  const proj = projects.find((p: any) => p.id === v);
+                                  if (proj) {
+                                    if (proj.start_date) updateAllocation(i, "start_date", proj.start_date);
+                                    if (proj.end_date) updateAllocation(i, "end_date", proj.end_date);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="flex-1 h-8 text-sm">
+                                  <SelectValue placeholder="Select project" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(alloc.project_id ? projects : availableProjects).map((p: any) => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="number" min="0" max="100" step="5"
+                                value={alloc.allocation_percentage}
+                                onChange={(e) => updateAllocation(i, "allocation_percentage", Number(e.target.value))}
+                                className="w-20 h-8 text-sm text-right"
+                                placeholder="%"
+                              />
+                              <span className="text-xs text-muted-foreground">%</span>
+                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeAllocation(i)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-xs text-muted-foreground">Start Date</label>
+                                <Input
+                                  type="date" value={alloc.start_date}
+                                  onChange={(e) => updateAllocation(i, "start_date", e.target.value)}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground">End Date</label>
+                                <Input
+                                  type="date" value={alloc.end_date}
+                                  onChange={(e) => updateAllocation(i, "end_date", e.target.value)}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                            </div>
+                            {project && (
+                              <p className="text-xs text-muted-foreground">
+                                Project period: {project.start_date || "N/A"} → {project.end_date || "N/A"}
+                              </p>
+                            )}
+                            {allocErrors[i] && (
+                              <div className="flex items-center gap-1.5 text-xs text-destructive">
+                                <AlertCircle className="h-3 w-3" />
+                                {allocErrors[i]}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={mutation.isPending}>

@@ -79,7 +79,7 @@ export default function Timesheets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("time_entries")
-        .select("*, resources(display_name), projects(name), project_phases(name)")
+        .select("*, resources(display_name, employment_type, monthly_cost, overhead_cost_eur, default_cost_rate), projects(name), project_phases(name)")
         .is("deleted_at", null)
         .gte("entry_date", dateRangeStart)
         .lte("entry_date", dateRangeEnd)
@@ -106,7 +106,7 @@ export default function Timesheets() {
   const { data: resources = [] } = useQuery({
     queryKey: ["resources-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("resources").select("id, display_name, default_bill_rate, default_cost_rate, currency").is("deleted_at", null).eq("is_active", true).order("display_name");
+      const { data, error } = await supabase.from("resources").select("id, display_name, default_bill_rate, default_cost_rate, currency, employment_type, monthly_cost, overhead_cost_eur").is("deleted_at", null).eq("is_active", true).order("display_name");
       if (error) throw error;
       return data;
     },
@@ -186,9 +186,42 @@ export default function Timesheets() {
     setFilterResource("all"); setFilterProject("all"); setFilterPhase("all"); setFilterStatus("all");
   };
 
+  // Cost calculation helper: groups by resource_id + month
+  const costMap = useMemo(() => {
+    const map = new Map<string, { baseCost: number; overhead: number; monthlyCost: number; totalHours: number }>();
+    // Group entries by resource + month
+    const groups: Record<string, { resource: any; totalHours: number }> = {};
+    filtered.forEach((t: any) => {
+      const month = t.entry_date?.substring(0, 7) || "";
+      const key = `${t.resource_id}-${month}`;
+      if (!groups[key]) {
+        groups[key] = { resource: t.resources, totalHours: 0 };
+      }
+      groups[key].totalHours += Number(t.hours || 0);
+    });
+    Object.entries(groups).forEach(([key, { resource, totalHours }]) => {
+      const empType = resource?.employment_type;
+      const monthlyCostVal = Number(resource?.monthly_cost ?? 0);
+      const overhead = Number(resource?.overhead_cost_eur ?? 0);
+      const costRate = Number(resource?.default_cost_rate ?? 0);
+      let baseCost: number;
+      if (empType === "full_time" || empType === "part_time") {
+        baseCost = monthlyCostVal;
+      } else {
+        baseCost = costRate * totalHours;
+      }
+      map.set(key, { baseCost, overhead, monthlyCost: baseCost + overhead, totalHours });
+    });
+    return map;
+  }, [filtered]);
+
   // Summary stats
   const totalHours = filtered.reduce((s: number, t: any) => s + Number(t.hours || 0), 0);
-  const totalCost = filtered.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0);
+  const totalCost = useMemo(() => {
+    let sum = 0;
+    costMap.forEach((v) => { sum += v.monthlyCost; });
+    return sum;
+  }, [costMap]);
   const totalRevenue = filtered.reduce((s: number, t: any) => s + (t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0), 0);
   const billableHours = filtered.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + Number(t.hours || 0), 0);
 
@@ -247,7 +280,7 @@ export default function Timesheets() {
                 const rows = filtered.map((t: any) => [
                   t.entry_date, (t.resources as any)?.display_name || "", (t.projects as any)?.name || "",
                   (t.project_phases as any)?.name || "", t.hours, t.is_billable ? "Yes" : "No",
-                  Number(t.hours || 0) * Number(t.cost_rate || 0),
+                  costMap.get(`${t.resource_id}-${t.entry_date?.substring(0, 7)}`)?.monthlyCost ?? 0,
                   t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0,
                   t.approval_status,
                 ]);
@@ -405,7 +438,9 @@ export default function Timesheets() {
                   </TableRow>
                 ) : (
                   filtered.map((t: any) => {
-                    const cost = Number(t.hours || 0) * Number(t.cost_rate || 0);
+                    const monthKey = `${t.resource_id}-${t.entry_date?.substring(0, 7)}`;
+                    const costData = costMap.get(monthKey);
+                    const monthlyCost = costData?.monthlyCost ?? 0;
                     const rev = t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0;
                     return (
                       <TableRow key={t.id} className="border-border hover:bg-muted/50">
@@ -419,7 +454,10 @@ export default function Timesheets() {
                         <TableCell>{(t.projects as any)?.name || "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{(t.project_phases as any)?.name || "—"}</TableCell>
                         <TableCell className="text-right font-medium">{t.hours}</TableCell>
-                        <TableCell className="text-right">{fmt(cost)}</TableCell>
+                        <TableCell className="text-right">
+                          <span title="Monthly total: base cost + overhead">{fmt(monthlyCost)}</span>
+                          <span className="block text-[10px] text-muted-foreground">monthly</span>
+                        </TableCell>
                         <TableCell className="text-right">{fmt(rev)}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">{t.is_billable ? "Yes" : "No"}</Badge>

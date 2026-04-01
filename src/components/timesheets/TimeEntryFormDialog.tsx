@@ -30,7 +30,7 @@ const schema = z.object({
   is_billable: z.boolean().default(true),
   description: z.string().max(500).optional(),
   bill_rate: z.coerce.number().min(0).optional(),
-  cost_rate: z.coerce.number().min(0).optional(),
+  
   currency: z.string().default("EUR"),
 });
 
@@ -54,7 +54,7 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
     resolver: zodResolver(schema),
     defaultValues: {
       resource_id: "", project_id: "", phase_id: "", entry_date: new Date().toISOString().split("T")[0],
-      hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
+      hours: 8, is_billable: true, description: "", bill_rate: 0, currency: "EUR",
     },
   });
 
@@ -74,14 +74,13 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
         is_billable: entry.is_billable ?? true,
         description: entry.description || "",
         bill_rate: Number(entry.bill_rate || 0),
-        cost_rate: Number(entry.cost_rate || 0),
         currency: entry.currency || "EUR",
       });
     } else {
       form.reset({
         resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         entry_date: new Date().toISOString().split("T")[0],
-        hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
+        hours: 8, is_billable: true, description: "", bill_rate: 0, currency: "EUR",
       });
     }
   }, [entry, form, open, reporterResourceId]);
@@ -93,7 +92,6 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
       const resource = resources.find((r: any) => r.id === watchResourceId);
       if (resource) {
         form.setValue("bill_rate", Number(resource.default_bill_rate || 0));
-        form.setValue("cost_rate", Number(resource.default_cost_rate || 0));
         form.setValue("currency", resource.currency || "EUR");
       }
     }
@@ -132,7 +130,6 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
         is_billable: values.is_billable,
         description: values.description || null,
         bill_rate: values.bill_rate || null,
-        cost_rate: values.cost_rate || null,
         currency: values.currency,
       };
 
@@ -229,14 +226,7 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
                 <FormMessage />
               </FormItem>
             )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="cost_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cost Rate ({sym}/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+            <div className="grid grid-cols-1 gap-4">
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Bill Rate ({sym}/hr)</FormLabel>

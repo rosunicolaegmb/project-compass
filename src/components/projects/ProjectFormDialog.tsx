@@ -45,6 +45,7 @@ const EMPTY_FORM = {
   status: "draft" as const, description: "", start_date: "", end_date: "",
   total_budget: "", planned_budget: "", revised_budget: "", currency: "USD",
   pm_resource_id: "", revenue_model: "", notes: "",
+  default_bill_rate: "", default_cost_rate: "",
 };
 
 export function ProjectFormDialog({ open, onOpenChange, project, clients, resources }: ProjectFormDialogProps) {

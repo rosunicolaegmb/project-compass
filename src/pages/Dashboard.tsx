@@ -138,9 +138,10 @@ export default function Dashboard() {
     const projectMetrics = projects.map((p: any) => {
       const pTime = filteredTime.filter((t: any) => t.project_id === p.id);
       const pExp = filteredExpenses.filter((e: any) => e.project_id === p.id);
-      const cost = pTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0) + pExp.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-      const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
-      const budget = Number(p.planned_budget || p.total_budget || 0);
+      const cost = pTime.reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date), 0)
+        + pExp.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
+      const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+      const budget = toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString());
       const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
       const budgetUsed = budget > 0 ? (cost / budget) * 100 : 0;
       const hasTime = pTime.length > 0;

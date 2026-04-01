@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowRightLeft, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,23 +18,32 @@ const MONTHS = [
 
 const YEARS = Array.from({ length: 10 }, (_, i) => 2026 + i);
 
+const CURRENCY_PAIRS = [
+  { from: "GBP", to: "EUR", label: "GBP → EUR", symbol: "€/£", defaultRate: "1.15" },
+  { from: "RON", to: "EUR", label: "RON → EUR", symbol: "€/lei", defaultRate: "0.20" },
+];
+
 export default function ConfigurePage() {
   const [selectedYear, setSelectedYear] = useState("2026");
+  const [activePair, setActivePair] = useState("GBP");
   const [rates, setRates] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadRates(Number(selectedYear));
-  }, [selectedYear]);
+  const pair = CURRENCY_PAIRS.find((p) => p.from === activePair)!;
 
-  const loadRates = async (year: number) => {
+  useEffect(() => {
+    loadRates(Number(selectedYear), pair.from);
+  }, [selectedYear, activePair]);
+
+  const loadRates = async (year: number, fromCurrency: string) => {
     setLoading(true);
+    const defaultRate = CURRENCY_PAIRS.find((p) => p.from === fromCurrency)?.defaultRate || "1";
     const { data, error } = await supabase
       .from("currency_conversion_rates")
       .select("month, rate")
       .eq("year", year)
-      .eq("from_currency", "GBP")
+      .eq("from_currency", fromCurrency)
       .eq("to_currency", "EUR")
       .order("month");
 
@@ -46,7 +56,7 @@ export default function ConfigurePage() {
     const rateMap: Record<number, string> = {};
     for (let m = 1; m <= 12; m++) {
       const found = data?.find((r) => r.month === m);
-      rateMap[m] = found ? String(found.rate) : "1.15";
+      rateMap[m] = found ? String(found.rate) : defaultRate;
     }
     setRates(rateMap);
     setLoading(false);
@@ -59,9 +69,9 @@ export default function ConfigurePage() {
     const upserts = Object.entries(rates).map(([month, rate]) => ({
       year,
       month: Number(month),
-      from_currency: "GBP",
+      from_currency: pair.from,
       to_currency: "EUR",
-      rate: Number(rate) || 1.15,
+      rate: Number(rate) || Number(pair.defaultRate),
     }));
 
     const { error } = await supabase
@@ -71,7 +81,7 @@ export default function ConfigurePage() {
     if (error) {
       toast.error("Failed to save rates: " + error.message);
     } else {
-      toast.success(`Conversion rates saved for ${selectedYear}`);
+      toast.success(`${pair.label} rates saved for ${selectedYear}`);
     }
     setSaving(false);
   };
@@ -86,9 +96,9 @@ export default function ConfigurePage() {
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
                 <ArrowRightLeft className="h-4 w-4" />
-                GBP → EUR Conversion Rates
+                Currency Conversion Rates
               </CardTitle>
-              <CardDescription>Set monthly conversion rates from British Pounds to Euros</CardDescription>
+              <CardDescription>Set monthly conversion rates to EUR (baseline currency)</CardDescription>
             </div>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-[120px]">
@@ -103,6 +113,14 @@ export default function ConfigurePage() {
           </div>
         </CardHeader>
         <CardContent>
+          <Tabs value={activePair} onValueChange={setActivePair} className="mb-4">
+            <TabsList>
+              {CURRENCY_PAIRS.map((cp) => (
+                <TabsTrigger key={cp.from} value={cp.from}>{cp.label}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -123,12 +141,12 @@ export default function ConfigurePage() {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={rates[month] ?? "1.15"}
+                          value={rates[month] ?? pair.defaultRate}
                           onChange={(e) => setRates((prev) => ({ ...prev, [month]: e.target.value }))}
-                          className="pr-12"
+                          className="pr-14"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          €/£
+                          {pair.symbol}
                         </span>
                       </div>
                     </div>

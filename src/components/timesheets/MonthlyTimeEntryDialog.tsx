@@ -187,7 +187,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
             <FormField control={form.control} name="resource_id" render={({ field }) => (
               <FormItem>
                 <FormLabel>Resource *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={!!reporterResourceId}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select resource" /></SelectTrigger></FormControl>
                   <SelectContent>
                     {resources.map((r: any) => (

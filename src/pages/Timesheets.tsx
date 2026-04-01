@@ -106,7 +106,7 @@ export default function Timesheets() {
   const { data: resources = [] } = useQuery({
     queryKey: ["resources-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("resources").select("id, display_name, default_bill_rate, default_cost_rate, currency").is("deleted_at", null).eq("is_active", true).order("display_name");
+      const { data, error } = await supabase.from("resources").select("id, display_name, default_bill_rate, default_cost_rate, currency, employment_type, monthly_cost, overhead_cost_eur").is("deleted_at", null).eq("is_active", true).order("display_name");
       if (error) throw error;
       return data;
     },

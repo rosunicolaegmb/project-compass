@@ -455,7 +455,7 @@ export default function Timesheets() {
                         <TableCell className="text-muted-foreground">{(t.project_phases as any)?.name || "—"}</TableCell>
                         <TableCell className="text-right font-medium">{t.hours}</TableCell>
                         <TableCell className="text-right">
-                          <span title={isMonthly ? "Monthly: base + overhead" : `Daily: rate × ${t.hours}h + overhead`}>{fmt(entryCost)}</span>
+                          <span title={isMonthly ? "Monthly cost" : `Daily: rate × ${t.hours}h`}>{fmt(entryCost)}</span>
                           <span className="block text-[10px] text-muted-foreground">{isMonthly ? "monthly" : "daily"}</span>
                         </TableCell>
                         <TableCell className="text-right">{fmt(rev)}</TableCell>

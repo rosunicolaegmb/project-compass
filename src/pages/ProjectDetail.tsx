@@ -54,6 +54,7 @@ function fmtHrs(n: number | null | undefined): string {
 }
 
 export default function ProjectDetail() {
+  useEffect(() => { loadConversionRates(); }, []);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { roles } = useAuth();

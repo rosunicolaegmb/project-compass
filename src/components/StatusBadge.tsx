@@ -29,7 +29,7 @@ const statusLabels: Partial<Record<Status, string>> = {
 export function StatusBadge({ status }: { status: Status }) {
   return (
     <Badge variant="outline" className={cn("text-xs font-medium capitalize", statusStyles[status])}>
-      {status}
+      {statusLabels[status] || status}
     </Badge>
   );
 }

@@ -29,6 +29,8 @@ const schema = z.object({
   delivery_role_id: z.string().optional(),
   default_bill_rate: z.coerce.number().min(0).optional(),
   default_cost_rate: z.coerce.number().min(0).optional(),
+  monthly_cost: z.coerce.number().min(0).optional(),
+  overhead_cost_eur: z.coerce.number().min(0).optional(),
   hire_date: z.string().optional(),
   is_active: z.boolean().default(true),
 });

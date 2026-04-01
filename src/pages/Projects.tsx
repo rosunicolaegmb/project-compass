@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -24,6 +25,7 @@ const STATUS_OPTIONS = ["draft", "active", "on_hold", "completed", "archived", "
 export default function Projects() {
   const { roles } = useAuth();
   const canEdit = canEditModule(roles, "projects");
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterClient, setFilterClient] = useState<string>("all");
@@ -213,7 +215,14 @@ export default function Projects() {
                 };
                 return (
                   <TableRow key={project.id} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-medium">{project.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <button
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                        className="text-left hover:text-primary hover:underline transition-colors"
+                      >
+                        {project.name}
+                      </button>
+                    </TableCell>
                     <TableCell>{clientName}</TableCell>
                     <TableCell className="text-muted-foreground">{project.code || "—"}</TableCell>
                     <TableCell>

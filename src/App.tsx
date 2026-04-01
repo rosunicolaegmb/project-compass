@@ -17,6 +17,7 @@ import Timesheets from "./pages/Timesheets";
 import Expenses from "./pages/Expenses";
 import Forecasting from "./pages/Forecasting";
 import Reports from "./pages/Reports";
+import ProjectDetail from "./pages/ProjectDetail";
 import AuditLog from "./pages/AuditLog";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/phases" element={<Phases />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/rates" element={<Rates />} />

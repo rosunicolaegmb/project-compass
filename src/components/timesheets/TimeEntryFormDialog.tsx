@@ -74,7 +74,6 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
         is_billable: entry.is_billable ?? true,
         description: entry.description || "",
         bill_rate: Number(entry.bill_rate || 0),
-        cost_rate: Number(entry.cost_rate || 0),
         currency: entry.currency || "EUR",
       });
     } else {

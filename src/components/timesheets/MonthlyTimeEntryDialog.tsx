@@ -71,7 +71,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         month: format(new Date(), "yyyy-MM"),
         hours: 8, is_billable: true, description: "",
-        bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
+        bill_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
       });
     }
   }, [open, form, reporterResourceId]);

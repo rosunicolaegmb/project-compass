@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
       resource.email,
       {
-        redirectTo: signupUrl,
+        redirectTo: appUrl,
         data: {
           full_name: resource.display_name,
           invited_resource_id: resource.id,

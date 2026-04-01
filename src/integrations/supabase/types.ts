@@ -813,6 +813,7 @@ export type Database = {
           employment_type: Database["public"]["Enums"]["employment_type"] | null
           hire_date: string | null
           id: string
+          invitation_status: string
           is_active: boolean
           job_title: string | null
           monthly_cost: number | null
@@ -838,6 +839,7 @@ export type Database = {
             | null
           hire_date?: string | null
           id?: string
+          invitation_status?: string
           is_active?: boolean
           job_title?: string | null
           monthly_cost?: number | null
@@ -863,6 +865,7 @@ export type Database = {
             | null
           hire_date?: string | null
           id?: string
+          invitation_status?: string
           is_active?: boolean
           job_title?: string | null
           monthly_cost?: number | null

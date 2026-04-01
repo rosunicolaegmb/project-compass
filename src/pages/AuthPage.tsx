@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,13 @@ const signupSchema = z.object({
 export default function AuthPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const prefilledEmail = searchParams.get("email") || "";
+  const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
 
   // Redirect if already logged in
   if (user) {
@@ -104,7 +108,7 @@ export default function AuthPage() {
         </div>
 
         <Card>
-          <Tabs defaultValue="login" onValueChange={() => { setError(null); setSuccess(null); }}>
+          <Tabs defaultValue={defaultTab} onValueChange={() => { setError(null); setSuccess(null); }}>
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Sign In</TabsTrigger>
@@ -130,7 +134,7 @@ export default function AuthPage() {
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
-                    <Input id="login-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" />
+                    <Input id="login-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" defaultValue={prefilledEmail} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="login-password">Password</Label>
@@ -150,7 +154,7 @@ export default function AuthPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
-                    <Input id="signup-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" />
+                    <Input id="signup-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" defaultValue={prefilledEmail} readOnly={!!prefilledEmail} className={prefilledEmail ? "bg-muted" : ""} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>

@@ -67,7 +67,7 @@ export default function Dashboard() {
     queryKey: ["dash-time"],
     queryFn: async () => {
       const { data, error } = await supabase.from("time_entries")
-        .select("hours, cost_rate, bill_rate, is_billable, project_id, entry_date, approval_status")
+        .select("hours, cost_rate, bill_rate, is_billable, project_id, entry_date, approval_status, currency")
         .is("deleted_at", null);
       if (error) throw error;
       return data;

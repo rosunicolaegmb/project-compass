@@ -48,6 +48,9 @@ function getPeriodRange(period: Period): { from: string; to: string } {
 
 export default function Dashboard() {
   const [period, setPeriod] = useState<Period>("yearly");
+
+  // Load conversion rates
+  useEffect(() => { loadConversionRates(); }, []);
   // ── data queries ──
   const { data: projects = [] } = useQuery({
     queryKey: ["dash-projects"],

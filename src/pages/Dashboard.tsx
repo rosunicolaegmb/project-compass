@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { loadConversionRates, toEur, fmtEur, fmtEurFull } from "@/lib/currency";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,6 +49,7 @@ function getPeriodRange(period: Period): { from: string; to: string } {
 }
 
 export default function Dashboard() {
+  const { isReporter } = useAuth();
   const [period, setPeriod] = useState<Period>("yearly");
 
   // Load conversion rates
@@ -226,6 +229,11 @@ export default function Dashboard() {
       </div>
     </div>
   );
+
+  // Reporters should not see dashboard data — redirect to timesheets
+  if (isReporter) {
+    return <Navigate to="/timesheets" replace />;
+  }
 
   return (
     <div className="page-container">

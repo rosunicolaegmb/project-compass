@@ -47,7 +47,13 @@ function getPeriodRange(period: Period): { from: string; to: string } {
 }
 
 export default function Dashboard() {
+  const { isReporter } = useAuth();
   const [period, setPeriod] = useState<Period>("yearly");
+
+  // Reporters should not see dashboard data — redirect to timesheets
+  if (isReporter) {
+    return <Navigate to="/timesheets" replace />;
+  }
 
   // Load conversion rates
   useEffect(() => { loadConversionRates(); }, []);

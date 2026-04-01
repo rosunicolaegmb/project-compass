@@ -53,7 +53,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
     defaultValues: {
       display_name: "", email: "", job_title: "", department: "", employee_id: "",
       employment_type: "full_time", delivery_role_id: "", default_bill_rate: 0,
-      default_cost_rate: 0, hire_date: "", is_active: true,
+      default_cost_rate: 0, monthly_cost: 0, overhead_cost_eur: 0, hire_date: "", is_active: true,
     },
   });
 

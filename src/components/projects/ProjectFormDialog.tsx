@@ -99,6 +99,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         pm_resource_id: values.pm_resource_id || null,
         revenue_model: values.revenue_model || null,
         notes: values.notes || null,
+        default_bill_rate: values.default_bill_rate ? parseFloat(values.default_bill_rate) : null,
+        default_cost_rate: values.default_cost_rate ? parseFloat(values.default_cost_rate) : null,
       };
 
       if (isEditing) {

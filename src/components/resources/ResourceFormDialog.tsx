@@ -201,21 +201,48 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                 </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="default_cost_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Cost Rate ($/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Bill Rate ($/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+            {isFullTime ? (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="monthly_cost" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Monthly Cost ($/mo)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Bill Rate ($/hr)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="default_cost_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Cost Rate ($/hr)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Bill Rate ($/hr)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            )}
+            <FormField control={form.control} name="overhead_cost_eur" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Monthly Overhead (€/mo)</FormLabel>
+                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             </div>
             <FormField control={form.control} name="hire_date" render={({ field }) => (
               <FormItem>

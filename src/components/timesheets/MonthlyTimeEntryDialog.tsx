@@ -24,7 +24,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import {
-  startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse, isSameDay,
+  startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse,
 } from "date-fns";
 
 const schema = z.object({

@@ -38,7 +38,7 @@ const phaseStatusMap: Record<string, any> = {
   planned: "draft", active: "active", completed: "completed", on_hold: "on-hold",
 };
 
-function fmt(n: number | null | undefined, prefix = "$"): string {
+function fmt(n: number | null | undefined, prefix = "€"): string {
   if (n == null) return "—";
   return `${prefix}${Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }

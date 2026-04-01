@@ -19,7 +19,7 @@ import { MonthlyTimeEntryDialog } from "@/components/timesheets/MonthlyTimeEntry
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { saveFilters, loadFilters } from "@/lib/filters";
 import { exportToCsv } from "@/lib/csv-export";
-import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import {
   startOfWeek, endOfWeek, addWeeks, subWeeks, format, parseISO,

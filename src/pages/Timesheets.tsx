@@ -282,7 +282,7 @@ export default function Timesheets() {
                 const rows = filtered.map((t: any) => [
                   t.entry_date, (t.resources as any)?.display_name || "", (t.projects as any)?.name || "",
                   (t.project_phases as any)?.name || "", t.hours, t.is_billable ? "Yes" : "No",
-                  costMap.get(`${t.resource_id}-${t.entry_date?.substring(0, 7)}`)?.monthlyCost ?? 0,
+                  getEntryCost(t),
                   t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0,
                   t.approval_status,
                 ]);

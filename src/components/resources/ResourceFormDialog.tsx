@@ -243,7 +243,6 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                 <FormMessage />
               </FormItem>
             )} />
-            </div>
             <FormField control={form.control} name="hire_date" render={({ field }) => (
               <FormItem>
                 <FormLabel>Hire Date</FormLabel>

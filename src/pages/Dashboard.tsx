@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,27 @@ const tooltipStyle = {
   borderRadius: 8, color: "hsl(var(--foreground))", fontSize: 12,
 };
 
+type Period = "monthly" | "quarterly" | "yearly";
+
+function getPeriodRange(period: Period): { from: string; to: string } {
+  const now = new Date();
+  let from: Date;
+  if (period === "monthly") {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (period === "quarterly") {
+    const q = Math.floor(now.getMonth() / 3) * 3;
+    from = new Date(now.getFullYear(), q, 1);
+  } else {
+    from = new Date(now.getFullYear(), 0, 1);
+  }
+  return {
+    from: from.toISOString().substring(0, 10),
+    to: now.toISOString().substring(0, 10),
+  };
+}
+
 export default function Dashboard() {
+  const [period, setPeriod] = useState<Period>("yearly");
   // ── data queries ──
   const { data: projects = [] } = useQuery({
     queryKey: ["dash-projects"],
@@ -91,6 +112,12 @@ export default function Dashboard() {
 
   // ── computed metrics ──
   const metrics = useMemo(() => {
+    const { from, to } = getPeriodRange(period);
+
+    // Filter time & expense entries by period
+    const filteredTime = timeEntries.filter((t: any) => t.entry_date >= from && t.entry_date <= to);
+    const filteredExpenses = expenseEntries.filter((e: any) => e.expense_date >= from && e.expense_date <= to);
+
     const activeProjects = projects.filter((p: any) => p.status === "active");
     const allProjectIds = new Set(projects.map((p: any) => p.id));
 
@@ -99,9 +126,9 @@ export default function Dashboard() {
     const totalRevisedBudget = projects.reduce((s: number, p: any) => s + Number(p.revised_budget || p.planned_budget || p.total_budget || 0), 0);
 
     // Actuals
-    const totalActualCost = timeEntries.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)
-      + expenseEntries.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-    const totalActualRevenue = timeEntries.filter((t: any) => t.is_billable)
+    const totalActualCost = filteredTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)
+      + filteredExpenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    const totalActualRevenue = filteredTime.filter((t: any) => t.is_billable)
       .reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
 
     // Forecast
@@ -113,8 +140,8 @@ export default function Dashboard() {
 
     // Per-project analysis
     const projectMetrics = projects.map((p: any) => {
-      const pTime = timeEntries.filter((t: any) => t.project_id === p.id);
-      const pExp = expenseEntries.filter((e: any) => e.project_id === p.id);
+      const pTime = filteredTime.filter((t: any) => t.project_id === p.id);
+      const pExp = filteredExpenses.filter((e: any) => e.project_id === p.id);
       const cost = pTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0) + pExp.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
       const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
       const budget = Number(p.revised_budget || p.planned_budget || p.total_budget || 0);
@@ -148,14 +175,14 @@ export default function Dashboard() {
 
     // Monthly trends
     const monthMap: Record<string, { cost: number; revenue: number }> = {};
-    timeEntries.forEach((t: any) => {
+    filteredTime.forEach((t: any) => {
       const m = t.entry_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
       monthMap[m].cost += Number(t.hours || 0) * Number(t.cost_rate || 0);
       if (t.is_billable) monthMap[m].revenue += Number(t.hours || 0) * Number(t.bill_rate || 0);
     });
-    expenseEntries.forEach((e: any) => {
+    filteredExpenses.forEach((e: any) => {
       const m = e.expense_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
@@ -183,7 +210,7 @@ export default function Dashboard() {
       overBudgetProjects, atRiskProjects, missingTimesheets,
       top10Revenue, top10Erosion, monthlyTrends, portfolioSplit,
     };
-  }, [projects, timeEntries, expenseEntries, forecasts, phases]);
+  }, [projects, timeEntries, expenseEntries, forecasts, phases, period]);
 
   // ── KPI card component ──
   const KpiCard = ({ label, value, sub, icon: Icon, accent }: {
@@ -205,7 +232,16 @@ export default function Dashboard() {
 
   return (
     <div className="page-container">
-      <PageHeader title="Executive Dashboard" description="Portfolio-level financial performance and health indicators" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <PageHeader title="Executive Dashboard" description="Portfolio-level financial performance and health indicators" />
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)} className="shrink-0">
+          <TabsList>
+            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+            <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+            <TabsTrigger value="yearly">Yearly</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* ── Row 1: Financial KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

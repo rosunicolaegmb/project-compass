@@ -261,6 +261,7 @@ export type Database = {
           notes: string | null
           phase_id: string | null
           project_id: string
+          scenario_type: Database["public"]["Enums"]["forecast_scenario"]
           updated_at: string
         }
         Insert: {
@@ -274,6 +275,7 @@ export type Database = {
           notes?: string | null
           phase_id?: string | null
           project_id: string
+          scenario_type?: Database["public"]["Enums"]["forecast_scenario"]
           updated_at?: string
         }
         Update: {
@@ -287,6 +289,7 @@ export type Database = {
           notes?: string | null
           phase_id?: string | null
           project_id?: string
+          scenario_type?: Database["public"]["Enums"]["forecast_scenario"]
           updated_at?: string
         }
         Relationships: [
@@ -658,6 +661,7 @@ export type Database = {
           id: string
           notes: string | null
           project_id: string
+          scenario_type: Database["public"]["Enums"]["forecast_scenario"]
           updated_at: string
         }
         Insert: {
@@ -670,6 +674,7 @@ export type Database = {
           id?: string
           notes?: string | null
           project_id: string
+          scenario_type?: Database["public"]["Enums"]["forecast_scenario"]
           updated_at?: string
         }
         Update: {
@@ -682,6 +687,7 @@ export type Database = {
           id?: string
           notes?: string | null
           project_id?: string
+          scenario_type?: Database["public"]["Enums"]["forecast_scenario"]
           updated_at?: string
         }
         Relationships: [
@@ -957,6 +963,7 @@ export type Database = {
           id: string
           notes: string | null
           project_id: string
+          scenario_type: Database["public"]["Enums"]["forecast_scenario"]
           updated_at: string
         }
         Insert: {
@@ -968,6 +975,7 @@ export type Database = {
           id?: string
           notes?: string | null
           project_id: string
+          scenario_type?: Database["public"]["Enums"]["forecast_scenario"]
           updated_at?: string
         }
         Update: {
@@ -979,6 +987,7 @@ export type Database = {
           id?: string
           notes?: string | null
           project_id?: string
+          scenario_type?: Database["public"]["Enums"]["forecast_scenario"]
           updated_at?: string
         }
         Relationships: [
@@ -1024,6 +1033,7 @@ export type Database = {
         | "subcontractor"
         | "operational"
         | "hardware"
+      forecast_scenario: "best_case" | "expected" | "worst_case"
       phase_status: "planned" | "active" | "completed" | "on_hold"
       project_status:
         | "draft"
@@ -1175,6 +1185,7 @@ export const Constants = {
         "operational",
         "hardware",
       ],
+      forecast_scenario: ["best_case", "expected", "worst_case"],
       phase_status: ["planned", "active", "completed", "on_hold"],
       project_status: [
         "draft",

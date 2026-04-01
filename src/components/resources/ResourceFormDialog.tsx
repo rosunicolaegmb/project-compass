@@ -121,6 +121,9 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
     full_time: "Full Time", part_time: "Part Time", contractor: "Contractor", vendor: "Vendor",
   };
 
+  const employmentType = form.watch("employment_type");
+  const isFullTime = employmentType === "full_time";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">

@@ -1078,6 +1078,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      link_resource_by_email: {
+        Args: { _email: string; _user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role:

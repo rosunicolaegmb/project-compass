@@ -175,14 +175,14 @@ export default function Dashboard() {
 
     // Monthly trends
     const monthMap: Record<string, { cost: number; revenue: number }> = {};
-    timeEntries.forEach((t: any) => {
+    filteredTime.forEach((t: any) => {
       const m = t.entry_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
       monthMap[m].cost += Number(t.hours || 0) * Number(t.cost_rate || 0);
       if (t.is_billable) monthMap[m].revenue += Number(t.hours || 0) * Number(t.bill_rate || 0);
     });
-    expenseEntries.forEach((e: any) => {
+    filteredExpenses.forEach((e: any) => {
       const m = e.expense_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };

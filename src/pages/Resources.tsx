@@ -35,6 +35,8 @@ export default function Resources() {
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [inviting, setInviting] = useState<any>(null);
+  const [signupLink, setSignupLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ["resources"],

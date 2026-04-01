@@ -20,6 +20,7 @@ import Reports from "./pages/Reports";
 import ProjectDetail from "./pages/ProjectDetail";
 import AuditLog from "./pages/AuditLog";
 import SettingsPage from "./pages/SettingsPage";
+import ConfigurePage from "./pages/ConfigurePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

@@ -35,7 +35,7 @@ const schema = z.object({
   is_billable: z.boolean().default(true),
   description: z.string().max(500).optional(),
   bill_rate: z.coerce.number().min(0).optional(),
-  
+  cost_rate: z.coerce.number().min(0).optional(),
   currency: z.string().default("EUR"),
   skip_weekends: z.boolean().default(true),
   skip_existing: z.boolean().default(true),
@@ -61,7 +61,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       resource_id: "", project_id: "", phase_id: "",
       month: format(new Date(), "yyyy-MM"),
       hours: 8, is_billable: true, description: "",
-      bill_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
+      bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
     },
   });
 
@@ -71,7 +71,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         month: format(new Date(), "yyyy-MM"),
         hours: 8, is_billable: true, description: "",
-        bill_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
+        bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
       });
     }
   }, [open, form, reporterResourceId]);
@@ -107,6 +107,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       const resource = resources.find((r: any) => r.id === watchResourceId);
       if (resource) {
         form.setValue("bill_rate", Number(resource.default_bill_rate || 0));
+        form.setValue("cost_rate", Number(resource.default_cost_rate || 0));
         form.setValue("currency", resource.currency || "EUR");
       }
     }
@@ -151,6 +152,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
           is_billable: values.is_billable,
           description: values.description || null,
           bill_rate: values.bill_rate || null,
+          cost_rate: values.cost_rate || null,
           currency: values.currency,
         }));
 
@@ -255,7 +257,14 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="cost_rate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cost Rate ({sym}/hr)</FormLabel>
+                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Bill Rate ({sym}/hr)</FormLabel>

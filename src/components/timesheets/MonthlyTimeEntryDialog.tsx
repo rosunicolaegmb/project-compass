@@ -49,9 +49,10 @@ interface MonthlyTimeEntryDialogProps {
   resources: any[];
   projects: any[];
   phases: any[];
+  reporterResourceId?: string | null;
 }
 
-export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects, phases }: MonthlyTimeEntryDialogProps) {
+export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects, phases, reporterResourceId }: MonthlyTimeEntryDialogProps) {
   const queryClient = useQueryClient();
 
   const form = useForm<FormData>({
@@ -67,13 +68,13 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   useEffect(() => {
     if (open) {
       form.reset({
-        resource_id: "", project_id: "", phase_id: "",
+        resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         month: format(new Date(), "yyyy-MM"),
         hours: 8, is_billable: true, description: "",
         bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
       });
     }
-  }, [open, form]);
+  }, [open, form, reporterResourceId]);
 
   const watchProjectId = form.watch("project_id");
   const watchMonth = form.watch("month");
@@ -186,7 +187,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
             <FormField control={form.control} name="resource_id" render={({ field }) => (
               <FormItem>
                 <FormLabel>Resource *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={!!reporterResourceId}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select resource" /></SelectTrigger></FormControl>
                   <SelectContent>
                     {resources.map((r: any) => (

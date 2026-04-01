@@ -40,7 +40,7 @@ function fmt(n: number | null | undefined) {
 }
 
 export default function Timesheets() {
-  const { roles, isAdmin, isOfficeAdmin } = useAuth();
+  const { roles, isAdmin, isOfficeAdmin, isReporter, user } = useAuth();
   const canEdit = canEditModule(roles, "timesheets");
   const canBulkEdit = isAdmin || isOfficeAdmin;
   const queryClient = useQueryClient();
@@ -89,11 +89,24 @@ export default function Timesheets() {
     },
   });
 
-  // Fetch resources
+  // For reporters, get their resource ID
+  const { data: reporterResource } = useQuery({
+    queryKey: ["reporter-resource", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase.from("resources").select("id").eq("user_id", user.id).maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: isReporter && !!user,
+  });
+  const reporterResourceId = isReporter ? (reporterResource?.id || null) : null;
+
+  // Fetch resources (RLS filters for reporters)
   const { data: resources = [] } = useQuery({
     queryKey: ["resources-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("resources").select("id, display_name, default_bill_rate, default_cost_rate").is("deleted_at", null).eq("is_active", true).order("display_name");
+      const { data, error } = await supabase.from("resources").select("id, display_name, default_bill_rate, default_cost_rate, currency").is("deleted_at", null).eq("is_active", true).order("display_name");
       if (error) throw error;
       return data;
     },
@@ -489,9 +502,9 @@ export default function Timesheets() {
         </TabsContent>
       </Tabs>
 
-      <TimeEntryFormDialog open={showCreate} onOpenChange={setShowCreate} entry={null} resources={resources} projects={projects} phases={phases} />
-      <TimeEntryFormDialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} entry={editing} resources={resources} projects={projects} phases={phases} />
-      <MonthlyTimeEntryDialog open={showMonthly} onOpenChange={setShowMonthly} resources={resources} projects={projects} phases={phases} />
+      <TimeEntryFormDialog open={showCreate} onOpenChange={setShowCreate} entry={null} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
+      <TimeEntryFormDialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} entry={editing} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
+      <MonthlyTimeEntryDialog open={showMonthly} onOpenChange={setShowMonthly} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <DeleteConfirmDialog
         open={!!deleting} onOpenChange={(o) => { if (!o) setDeleting(null); }}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}

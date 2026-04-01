@@ -1078,9 +1078,18 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      link_resource_by_email: {
+        Args: { _email: string; _user_id: string }
+        Returns: string
+      }
     }
     Enums: {
-      app_role: "admin" | "office_admin" | "pm" | "executive_viewer"
+      app_role:
+        | "admin"
+        | "office_admin"
+        | "pm"
+        | "executive_viewer"
+        | "reporter"
       approval_status: "pending" | "approved" | "rejected"
       employment_type: "full_time" | "part_time" | "contractor" | "vendor"
       expense_category:
@@ -1232,7 +1241,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "office_admin", "pm", "executive_viewer"],
+      app_role: ["admin", "office_admin", "pm", "executive_viewer", "reporter"],
       approval_status: ["pending", "approved", "rejected"],
       employment_type: ["full_time", "part_time", "contractor", "vendor"],
       expense_category: [

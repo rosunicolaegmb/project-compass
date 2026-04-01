@@ -19,6 +19,7 @@ interface AuthContextType {
   isOfficeAdmin: boolean;
   isPM: boolean;
   isExecutiveViewer: boolean;
+  isReporter: boolean;
   canEdit: boolean;
 }
 
@@ -102,7 +103,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isOfficeAdmin = hasRole("office_admin");
   const isPM = hasRole("pm");
   const isExecutiveViewer = hasRole("executive_viewer");
+  const isReporter = hasRole("reporter");
   const canEdit = isAdmin || isOfficeAdmin || isPM;
+
+  // Auto-link resource by email for reporters
+  useEffect(() => {
+    if (user?.email && isReporter) {
+      supabase.rpc("link_resource_by_email", { _user_id: user.id, _email: user.email }).then(() => {});
+    }
+  }, [user, isReporter]);
 
   return (
     <AuthContext.Provider
@@ -110,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, session, roles, loading,
         signIn, signUp, signOut,
         hasRole, hasAnyRole,
-        isAdmin, isOfficeAdmin, isPM, isExecutiveViewer, canEdit,
+        isAdmin, isOfficeAdmin, isPM, isExecutiveViewer, isReporter, canEdit,
       }}
     >
       {children}

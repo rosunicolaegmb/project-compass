@@ -69,6 +69,8 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         delivery_role_id: resource.delivery_role_id || "",
         default_bill_rate: Number(resource.default_bill_rate || 0),
         default_cost_rate: Number(resource.default_cost_rate || 0),
+        monthly_cost: Number(resource.monthly_cost || 0),
+        overhead_cost_eur: Number(resource.overhead_cost_eur || 0),
         hire_date: resource.hire_date || "",
         is_active: resource.is_active ?? true,
       });

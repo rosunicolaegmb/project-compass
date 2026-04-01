@@ -68,6 +68,7 @@ export default function Resources() {
   });
 
   const fmtRate = (n: number | null | undefined) => n != null ? `$${Number(n).toLocaleString()}/hr` : "—";
+  const fmtMonthly = (n: number | null | undefined, currency = "$") => n != null ? `${currency}${Number(n).toLocaleString()}/mo` : "—";
 
   const handleExport = () => {
     const rows = filtered.map((r: any) => [

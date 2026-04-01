@@ -59,7 +59,7 @@ export default function Dashboard() {
     queryKey: ["dash-projects"],
     queryFn: async () => {
       const { data, error } = await supabase.from("projects")
-        .select("id, name, status, project_type, total_budget, planned_budget, revised_budget, client_id, pm_resource_id, clients(name)")
+        .select("id, name, status, project_type, total_budget, planned_budget, client_id, pm_resource_id, clients(name)")
         .is("deleted_at", null);
       if (error) throw error;
       return data;

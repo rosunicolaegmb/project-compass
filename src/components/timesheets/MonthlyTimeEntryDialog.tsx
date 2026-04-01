@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,10 +20,11 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import {
-  startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse,
+  startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse, isSameDay,
 } from "date-fns";
 
 const schema = z.object({
@@ -52,8 +53,25 @@ interface MonthlyTimeEntryDialogProps {
   reporterResourceId?: string | null;
 }
 
+function computeWorkingDays(month: string, skipWeekends: boolean): Date[] {
+  if (!month) return [];
+  try {
+    const monthDate = parse(month, "yyyy-MM", new Date());
+    const start = startOfMonth(monthDate);
+    const end = endOfMonth(monthDate);
+    const allDays = eachDayOfInterval({ start, end });
+    if (skipWeekends) {
+      return allDays.filter(d => { const day = getDay(d); return day !== 0 && day !== 6; });
+    }
+    return allDays;
+  } catch {
+    return [];
+  }
+}
+
 export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects, phases, reporterResourceId }: MonthlyTimeEntryDialogProps) {
   const queryClient = useQueryClient();
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -67,12 +85,14 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
   useEffect(() => {
     if (open) {
+      const defaultMonth = format(new Date(), "yyyy-MM");
       form.reset({
         resource_id: reporterResourceId || "", project_id: "", phase_id: "",
-        month: format(new Date(), "yyyy-MM"),
+        month: defaultMonth,
         hours: 8, is_billable: true, description: "",
         bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
       });
+      setSelectedDates(computeWorkingDays(defaultMonth, true));
     }
   }, [open, form, reporterResourceId]);
 
@@ -83,23 +103,23 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
   const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
 
-  const workingDays = useMemo(() => {
-    if (!watchMonth) return [];
-    try {
-      const monthDate = parse(watchMonth, "yyyy-MM", new Date());
-      const start = startOfMonth(monthDate);
-      const end = endOfMonth(monthDate);
-      const allDays = eachDayOfInterval({ start, end });
-      if (watchSkipWeekends) {
-        return allDays.filter(d => { const day = getDay(d); return day !== 0 && day !== 6; });
-      }
-      return allDays;
-    } catch {
-      return [];
-    }
+  // Recompute default selection when month or skip_weekends changes
+  useEffect(() => {
+    setSelectedDates(computeWorkingDays(watchMonth, watchSkipWeekends));
   }, [watchMonth, watchSkipWeekends]);
 
-  const totalHours = workingDays.length * (form.watch("hours") || 0);
+  // Month boundaries for calendar constraints
+  const monthBounds = useMemo(() => {
+    if (!watchMonth) return { start: new Date(), end: new Date() };
+    try {
+      const monthDate = parse(watchMonth, "yyyy-MM", new Date());
+      return { start: startOfMonth(monthDate), end: endOfMonth(monthDate) };
+    } catch {
+      return { start: new Date(), end: new Date() };
+    }
+  }, [watchMonth]);
+
+  const totalHours = selectedDates.length * (form.watch("hours") || 0);
 
   const watchResourceId = form.watch("resource_id");
   useEffect(() => {
@@ -113,11 +133,19 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
     }
   }, [watchResourceId, resources, form]);
 
+  const handleSelectAll = () => {
+    setSelectedDates(computeWorkingDays(watchMonth, watchSkipWeekends));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedDates([]);
+  };
+
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
-      if (workingDays.length === 0) throw new Error("No days to log for this month.");
+      if (selectedDates.length === 0) throw new Error("No days selected for this month.");
 
-      const dates = workingDays.map(d => format(d, "yyyy-MM-dd"));
+      const dates = selectedDates.map(d => format(d, "yyyy-MM-dd"));
 
       let existingDates = new Set<string>();
       if (values.skip_existing) {
@@ -138,7 +166,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       const skipCount = dates.length - newDates.length;
 
       if (newDates.length === 0) {
-        throw new Error("All days already have time entries for this resource/project combination.");
+        throw new Error("All selected days already have time entries for this resource/project combination.");
       }
 
       const batchSize = 50;
@@ -179,7 +207,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         <DialogHeader>
           <DialogTitle>Log Full Month</DialogTitle>
           <DialogDescription>
-            Create time entries for all working days in a month at once.
+            Create time entries for selected days in a month. Click days to toggle them.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -238,6 +266,33 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* Interactive day picker */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-sm font-medium">Select Days</FormLabel>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={handleSelectAll}>
+                    Select All
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleDeselectAll}>
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-md border p-2 flex justify-center">
+                <Calendar
+                  mode="multiple"
+                  selected={selectedDates}
+                  onSelect={(dates) => setSelectedDates(dates || [])}
+                  month={monthBounds.start}
+                  disableNavigation
+                  fromDate={monthBounds.start}
+                  toDate={monthBounds.end}
+                  className="pointer-events-auto"
+                />
+              </div>
+            </div>
 
             <FormField control={form.control} name="hours" render={({ field }) => (
               <FormItem>
@@ -313,8 +368,8 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
             <div className="rounded-md bg-muted p-3 space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Days to log</span>
-                <Badge variant="secondary">{workingDays.length} days</Badge>
+                <span className="text-muted-foreground">Days selected</span>
+                <Badge variant="secondary">{selectedDates.length} days</Badge>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total hours</span>
@@ -324,8 +379,8 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? "Creating entries..." : `Log ${workingDays.length} Days`}
+              <Button type="submit" disabled={mutation.isPending || selectedDates.length === 0}>
+                {mutation.isPending ? "Creating entries..." : `Log ${selectedDates.length} Days`}
               </Button>
             </div>
           </form>

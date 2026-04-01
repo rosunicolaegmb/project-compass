@@ -89,55 +89,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user already exists with this email
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(
-      (u: any) => u.email?.toLowerCase() === resource.email.toLowerCase()
-    );
-
-    if (existingUser) {
-      // User already exists, just assign reporter role and link
-      await adminClient.from("user_roles").upsert(
-        { user_id: existingUser.id, role: "reporter" },
-        { onConflict: "user_id,role" }
-      );
-      await adminClient
-        .from("resources")
-        .update({ user_id: existingUser.id, invitation_status: "active" })
-        .eq("id", resource_id);
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "User already exists. Reporter role assigned and resource linked.",
-          already_exists: true,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
-    }
-
-    // Invite user via Supabase Auth
-    // Redirect to app root — inviteUserByEmail auto-creates the user,
-    // so clicking the link just verifies & logs them in (no signup needed)
+    // Generate a signup link (no email sent, no user created)
     const appUrl = redirect_url || "https://forecast-compass-hub.lovable.app";
-
-    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
-      resource.email,
-      {
-        redirectTo: appUrl,
-        data: {
-          full_name: resource.display_name,
-          invited_resource_id: resource.id,
-        },
-      }
-    );
-
-    if (inviteError) {
-      return new Response(
-        JSON.stringify({ error: inviteError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const signupLink = `${appUrl}/auth?tab=signup&email=${encodeURIComponent(resource.email)}&name=${encodeURIComponent(resource.display_name)}`;
 
     // Update invitation status
     await adminClient
@@ -148,7 +102,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Invitation sent to ${resource.email}`,
+        signup_link: signupLink,
+        message: `Signup link generated for ${resource.email}`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

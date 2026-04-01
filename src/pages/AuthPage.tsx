@@ -33,6 +33,7 @@ export default function AuthPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const prefilledEmail = searchParams.get("email") || "";
+  const prefilledName = searchParams.get("name") || "";
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
 
   // Redirect if already logged in
@@ -150,7 +151,7 @@ export default function AuthPage() {
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
-                    <Input id="signup-name" name="fullName" placeholder="John Doe" required autoComplete="name" />
+                    <Input id="signup-name" name="fullName" placeholder="John Doe" required autoComplete="name" defaultValue={prefilledName} readOnly={!!prefilledName} className={prefilledName ? "bg-muted" : ""} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>

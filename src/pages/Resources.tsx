@@ -17,7 +17,8 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, Trash2, UserCircle, Download, Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Search, Pencil, Trash2, UserCircle, Download, Mail, Copy, Check } from "lucide-react";
 import { exportToCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 
@@ -34,6 +35,8 @@ export default function Resources() {
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [inviting, setInviting] = useState<any>(null);
+  const [signupLink, setSignupLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ["resources"],
@@ -80,14 +83,23 @@ export default function Resources() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["resources"] });
-      toast.success(data?.message || "Invitation sent successfully!");
       setInviting(null);
+      setSignupLink(data.signup_link);
+      setCopied(false);
     },
     onError: (err: Error) => {
-      toast.error(`Failed to send invitation: ${err.message}`);
+      toast.error(`Failed to generate invite link: ${err.message}`);
       setInviting(null);
     },
   });
+
+  const handleCopyLink = async () => {
+    if (!signupLink) return;
+    await navigator.clipboard.writeText(signupLink);
+    setCopied(true);
+    toast.success("Link copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const filtered = resources.filter((r: any) => {
     const q = search.toLowerCase();
@@ -250,12 +262,12 @@ export default function Resources() {
             <AlertDialogTitle>Invite {inviting?.display_name}?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                An invitation email will be sent to <strong>{inviting?.email}</strong> inviting them
-                to join BudgetTrack for entering timesheets on their allocated projects.
+                A signup link will be generated for <strong>{inviting?.email}</strong> so they can
+                join BudgetTrack and enter timesheets on their allocated projects.
               </p>
               <p className="text-xs text-muted-foreground">
-                Once they accept and complete registration, they will automatically receive the Reporter role
-                with access to the Timesheets module.
+                Copy the link and share it with the resource. Once they complete registration,
+                they will automatically receive the Reporter role with access to Timesheets.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -265,11 +277,34 @@ export default function Resources() {
               onClick={() => inviting && inviteMutation.mutate(inviting)}
               disabled={inviteMutation.isPending}
             >
-              {inviteMutation.isPending ? "Sending..." : "Send Invitation"}
+              {inviteMutation.isPending ? "Generating..." : "Generate Invite Link"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Signup Link Dialog */}
+      <Dialog open={!!signupLink} onOpenChange={(o) => { if (!o) { setSignupLink(null); setCopied(false); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Invite Link Ready</DialogTitle>
+            <DialogDescription>
+              Copy this link and send it to the resource. They'll be directed to the signup page with their details pre-filled.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <Input value={signupLink || ""} readOnly className="bg-muted text-xs font-mono" />
+            <Button size="icon" variant="outline" onClick={handleCopyLink} className="shrink-0">
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSignupLink(null); setCopied(false); }}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

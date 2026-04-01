@@ -112,6 +112,12 @@ export default function Dashboard() {
 
   // ── computed metrics ──
   const metrics = useMemo(() => {
+    const { from, to } = getPeriodRange(period);
+
+    // Filter time & expense entries by period
+    const filteredTime = timeEntries.filter((t: any) => t.entry_date >= from && t.entry_date <= to);
+    const filteredExpenses = expenseEntries.filter((e: any) => e.expense_date >= from && e.expense_date <= to);
+
     const activeProjects = projects.filter((p: any) => p.status === "active");
     const allProjectIds = new Set(projects.map((p: any) => p.id));
 

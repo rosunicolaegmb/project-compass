@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, FolderKanban, Layers, UserCog,
   BadgeDollarSign, Clock, Receipt, TrendingUp, BarChart3,
-  ScrollText, Settings, LogOut,
+  ScrollText, Settings, Wrench, LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";

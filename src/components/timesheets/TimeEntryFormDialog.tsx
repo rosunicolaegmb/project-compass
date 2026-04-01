@@ -54,7 +54,7 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
     resolver: zodResolver(schema),
     defaultValues: {
       resource_id: "", project_id: "", phase_id: "", entry_date: new Date().toISOString().split("T")[0],
-      hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
+      hours: 8, is_billable: true, description: "", bill_rate: 0, currency: "EUR",
     },
   });
 

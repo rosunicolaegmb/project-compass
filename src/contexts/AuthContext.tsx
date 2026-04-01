@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, session, roles, loading,
         signIn, signUp, signOut,
         hasRole, hasAnyRole,
-        isAdmin, isOfficeAdmin, isPM, isExecutiveViewer, canEdit,
+        isAdmin, isOfficeAdmin, isPM, isExecutiveViewer, isReporter, canEdit,
       }}
     >
       {children}

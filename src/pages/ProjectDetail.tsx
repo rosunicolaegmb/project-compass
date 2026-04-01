@@ -678,19 +678,19 @@ export default function ProjectDetail() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Forecast Revenue</p>
-                  <p className="text-lg font-semibold">{fmt(forecastRevenue)}</p>
+                  <p className="text-lg font-semibold">{fmt(metrics.forecastRevenue)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Forecast Cost</p>
-                  <p className="text-lg font-semibold">{fmt(forecastCost)}</p>
+                  <p className="text-lg font-semibold">{fmt(metrics.forecastCost)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Forecast Hours</p>
-                  <p className="text-lg font-semibold">{fmtHrs(forecastHours)}</p>
+                  <p className="text-lg font-semibold">{fmtHrs(metrics.forecastCost > 0 ? monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_hours || 0), 0) : 0)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Margin at Completion</p>
-                  <p className="text-lg font-semibold">{fmtPct(marginAtCompletion)}</p>
+                  <p className="text-lg font-semibold">{fmtPct(metrics.marginAtCompletion)}</p>
                 </div>
               </div>
               {monthlyForecasts.length > 0 && (

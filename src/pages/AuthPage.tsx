@@ -134,7 +134,7 @@ export default function AuthPage() {
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
-                    <Input id="login-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" />
+                    <Input id="login-email" name="email" type="email" placeholder="you@company.com" required autoComplete="email" defaultValue={prefilledEmail} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="login-password">Password</Label>

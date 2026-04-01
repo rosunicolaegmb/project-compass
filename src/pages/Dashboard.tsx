@@ -283,7 +283,7 @@ export default function Dashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `$${v / 1000}k`} />
+                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `€${v / 1000}k`} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [fmtFull(v)]} />
                   <Legend />
                   <Area type="monotone" dataKey="revenue" stroke="hsl(160, 60%, 40%)" fill="url(#gRev)" strokeWidth={2} name="Revenue" />

@@ -262,12 +262,12 @@ export default function Resources() {
             <AlertDialogTitle>Invite {inviting?.display_name}?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                An invitation email will be sent to <strong>{inviting?.email}</strong> inviting them
-                to join BudgetTrack for entering timesheets on their allocated projects.
+                A signup link will be generated for <strong>{inviting?.email}</strong> so they can
+                join BudgetTrack and enter timesheets on their allocated projects.
               </p>
               <p className="text-xs text-muted-foreground">
-                Once they accept and complete registration, they will automatically receive the Reporter role
-                with access to the Timesheets module.
+                Copy the link and share it with the resource. Once they complete registration,
+                they will automatically receive the Reporter role with access to Timesheets.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -277,11 +277,34 @@ export default function Resources() {
               onClick={() => inviting && inviteMutation.mutate(inviting)}
               disabled={inviteMutation.isPending}
             >
-              {inviteMutation.isPending ? "Sending..." : "Send Invitation"}
+              {inviteMutation.isPending ? "Generating..." : "Generate Invite Link"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Signup Link Dialog */}
+      <Dialog open={!!signupLink} onOpenChange={(o) => { if (!o) { setSignupLink(null); setCopied(false); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Invite Link Ready</DialogTitle>
+            <DialogDescription>
+              Copy this link and send it to the resource. They'll be directed to the signup page with their details pre-filled.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <Input value={signupLink || ""} readOnly className="bg-muted text-xs font-mono" />
+            <Button size="icon" variant="outline" onClick={handleCopyLink} className="shrink-0">
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSignupLink(null); setCopied(false); }}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

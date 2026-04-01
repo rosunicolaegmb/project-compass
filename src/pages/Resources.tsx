@@ -13,7 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ResourceFormDialog } from "@/components/resources/ResourceFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Plus, Search, Pencil, Trash2, UserCircle, Download } from "lucide-react";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Pencil, Trash2, UserCircle, Download, Mail } from "lucide-react";
 import { exportToCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 
@@ -29,6 +33,7 @@ export default function Resources() {
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
+  const [inviting, setInviting] = useState<any>(null);
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ["resources"],
@@ -61,6 +66,29 @@ export default function Resources() {
     onError: (err: Error) => toast.error(`Failed to delete resource: ${err.message}`),
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: async (resource: any) => {
+      const { data, error } = await supabase.functions.invoke("invite-resource", {
+        body: {
+          resource_id: resource.id,
+          redirect_url: window.location.origin + "/auth",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      toast.success(data?.message || "Invitation sent successfully!");
+      setInviting(null);
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to send invitation: ${err.message}`);
+      setInviting(null);
+    },
+  });
+
   const filtered = resources.filter((r: any) => {
     const q = search.toLowerCase();
     return [r.display_name, r.email, r.department, r.job_title, (r.delivery_roles as any)?.name]
@@ -70,6 +98,17 @@ export default function Resources() {
   const fmtRate = (n: number | null | undefined) => n != null ? `$${Number(n).toLocaleString()}/hr` : "—";
   const fmtMonthly = (n: number | null | undefined, currency = "$") => n != null ? `${currency}${Number(n).toLocaleString()}/mo` : "—";
 
+  const getInvitationStatus = (r: any): "active" | "not_invited" | "invitation_sent" | "archived" => {
+    if (!r.is_active) return "archived";
+    if (r.invitation_status === "active") return "active";
+    if (r.invitation_status === "invitation_sent") return "invitation_sent";
+    return "not_invited";
+  };
+
+  const canInvite = (r: any) => {
+    return canEdit && r.email && r.invitation_status !== "active" && r.is_active;
+  };
+
   const handleExport = () => {
     const rows = filtered.map((r: any) => [
       r.display_name, r.email || "", (r.delivery_roles as any)?.name || "",
@@ -77,7 +116,7 @@ export default function Resources() {
       r.employment_type === "full_time" ? (r.monthly_cost || "") : (r.default_cost_rate || ""),
       r.default_bill_rate || "",
       r.overhead_cost_eur || "",
-      r.is_active ? "Active" : "Inactive",
+      getInvitationStatus(r),
     ]);
     exportToCsv("resources.csv", ["Name", "Email", "Role", "Department", "Type", "Cost", "Bill Rate", "Overhead (EUR)", "Status"], rows);
     toast.success("Exported resources to CSV");
@@ -126,7 +165,7 @@ export default function Resources() {
               <TableHead className="text-right">Bill Rate</TableHead>
               <TableHead className="text-right hidden lg:table-cell">Overhead (€)</TableHead>
               <TableHead>Status</TableHead>
-              {canEdit && <TableHead className="w-20">Actions</TableHead>}
+              {canEdit && <TableHead className="w-28">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -164,10 +203,21 @@ export default function Resources() {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtRate(r.default_bill_rate)}</TableCell>
                   <TableCell className="text-right tabular-nums hidden lg:table-cell">{fmtMonthly(r.overhead_cost_eur, "€")}</TableCell>
-                  <TableCell><StatusBadge status={r.is_active ? "active" : "archived"} /></TableCell>
+                  <TableCell><StatusBadge status={getInvitationStatus(r)} /></TableCell>
                   {canEdit && (
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {canInvite(r) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-primary"
+                            title="Send invitation"
+                            onClick={() => setInviting(r)}
+                          >
+                            <Mail className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(r)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -192,6 +242,34 @@ export default function Resources() {
         title="Delete Resource" description={`Delete "${deleting?.display_name}"? This uses soft delete.`}
         loading={deleteMutation.isPending}
       />
+
+      {/* Invite Confirmation Dialog */}
+      <AlertDialog open={!!inviting} onOpenChange={(o) => { if (!o) setInviting(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Invite {inviting?.display_name}?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                An invitation email will be sent to <strong>{inviting?.email}</strong> inviting them
+                to join BudgetTrack for entering timesheets on their allocated projects.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Once they accept and complete registration, they will automatically receive the Reporter role
+                with access to the Timesheets module.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={inviteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => inviting && inviteMutation.mutate(inviting)}
+              disabled={inviteMutation.isPending}
+            >
+              {inviteMutation.isPending ? "Sending..." : "Send Invitation"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

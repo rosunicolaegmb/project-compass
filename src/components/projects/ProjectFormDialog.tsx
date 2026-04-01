@@ -72,6 +72,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         pm_resource_id: project.pm_resource_id || "",
         revenue_model: project.revenue_model || "",
         notes: project.notes || "",
+        default_bill_rate: project.default_bill_rate != null ? String(project.default_bill_rate) : "",
+        default_cost_rate: project.default_cost_rate != null ? String(project.default_cost_rate) : "",
       });
     } else {
       setForm(EMPTY_FORM);

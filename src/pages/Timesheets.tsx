@@ -446,8 +446,14 @@ export default function Timesheets() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {weeklyGrouped.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No time entries this week.</TableCell></TableRow>
+                {isLoading ? (
+                  <TableSkeleton columns={8} rows={4} />
+                ) : weeklyGrouped.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                      <EmptyState icon={Clock} title="No time entries this week" description="Navigate to a different week or log time entries." />
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   weeklyGrouped.map((row) => (
                     <TableRow key={`${row.resourceId}::${row.projectId}`} className="border-border hover:bg-muted/50">

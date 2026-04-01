@@ -151,7 +151,7 @@ export default function AuthPage() {
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
-                    <Input id="signup-name" name="fullName" placeholder="John Doe" required autoComplete="name" />
+                    <Input id="signup-name" name="fullName" placeholder="John Doe" required autoComplete="name" defaultValue={prefilledName} readOnly={!!prefilledName} className={prefilledName ? "bg-muted" : ""} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>

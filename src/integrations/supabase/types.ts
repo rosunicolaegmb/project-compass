@@ -798,6 +798,8 @@ export type Database = {
       }
       resources: {
         Row: {
+          bill_rate_currency: string
+          cost_rate_currency: string
           created_at: string
           currency: string
           default_bill_rate: number | null
@@ -819,6 +821,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          bill_rate_currency?: string
+          cost_rate_currency?: string
           created_at?: string
           currency?: string
           default_bill_rate?: number | null
@@ -842,6 +846,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          bill_rate_currency?: string
+          cost_rate_currency?: string
           created_at?: string
           currency?: string
           default_bill_rate?: number | null

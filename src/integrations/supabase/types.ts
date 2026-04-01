@@ -572,6 +572,8 @@ export type Database = {
           code: string | null
           created_at: string
           currency: string
+          default_bill_rate: number | null
+          default_cost_rate: number | null
           deleted_at: string | null
           description: string | null
           end_date: string | null
@@ -594,6 +596,8 @@ export type Database = {
           code?: string | null
           created_at?: string
           currency?: string
+          default_bill_rate?: number | null
+          default_cost_rate?: number | null
           deleted_at?: string | null
           description?: string | null
           end_date?: string | null
@@ -616,6 +620,8 @@ export type Database = {
           code?: string | null
           created_at?: string
           currency?: string
+          default_bill_rate?: number | null
+          default_cost_rate?: number | null
           deleted_at?: string | null
           description?: string | null
           end_date?: string | null

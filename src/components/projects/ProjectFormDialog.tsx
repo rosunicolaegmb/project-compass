@@ -28,6 +28,8 @@ const projectSchema = z.object({
   pm_resource_id: z.string().optional().or(z.literal("")),
   revenue_model: z.string().trim().max(100).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  default_bill_rate: z.string().optional().or(z.literal("")),
+  default_cost_rate: z.string().optional().or(z.literal("")),
 });
 
 interface ProjectFormDialogProps {
@@ -43,6 +45,7 @@ const EMPTY_FORM = {
   status: "draft" as const, description: "", start_date: "", end_date: "",
   total_budget: "", planned_budget: "", revised_budget: "", currency: "USD",
   pm_resource_id: "", revenue_model: "", notes: "",
+  default_bill_rate: "", default_cost_rate: "",
 };
 
 export function ProjectFormDialog({ open, onOpenChange, project, clients, resources }: ProjectFormDialogProps) {
@@ -69,6 +72,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         pm_resource_id: project.pm_resource_id || "",
         revenue_model: project.revenue_model || "",
         notes: project.notes || "",
+        default_bill_rate: project.default_bill_rate != null ? String(project.default_bill_rate) : "",
+        default_cost_rate: project.default_cost_rate != null ? String(project.default_cost_rate) : "",
       });
     } else {
       setForm(EMPTY_FORM);
@@ -94,6 +99,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         pm_resource_id: values.pm_resource_id || null,
         revenue_model: values.revenue_model || null,
         notes: values.notes || null,
+        default_bill_rate: values.default_bill_rate ? parseFloat(values.default_bill_rate) : null,
+        default_cost_rate: values.default_cost_rate ? parseFloat(values.default_cost_rate) : null,
       };
 
       if (isEditing) {
@@ -238,6 +245,19 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
             </div>
           </div>
 
+          {/* Row 6: Default Rates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Default Bill Rate ($/hr)</Label>
+              <Input type="number" step="0.01" value={form.default_bill_rate} onChange={(e) => update("default_bill_rate", e.target.value)} placeholder="Inherit from resource" />
+              <p className="text-xs text-muted-foreground">Applies to all members unless individually overridden</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Default Cost Rate ($/hr)</Label>
+              <Input type="number" step="0.01" value={form.default_cost_rate} onChange={(e) => update("default_cost_rate", e.target.value)} placeholder="Inherit from resource" />
+              <p className="text-xs text-muted-foreground">Rate hierarchy: Member → Project → Resource</p>
+            </div>
+          </div>
           {/* Description */}
           <div className="space-y-1.5">
             <Label>Description</Label>

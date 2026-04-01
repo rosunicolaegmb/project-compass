@@ -43,6 +43,7 @@ interface TimeEntryFormDialogProps {
   resources: any[];
   projects: any[];
   phases: any[];
+  reporterResourceId?: string | null;
 }
 
 export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, projects, phases }: TimeEntryFormDialogProps) {

@@ -47,10 +47,19 @@ export async function loadConversionRates(): Promise<Record<string, number>> {
  * Get the GBP→EUR rate for a specific month.
  * Falls back to 1.15 if not found.
  */
-export function getGbpToEurRate(date: string | Date): number {
+export function getToEurRate(currency: string, date: string | Date): number {
   const d = typeof date === "string" ? new Date(date) : date;
-  const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-  return rateCache[key] ?? 1.15;
+  const key = `${currency}-${d.getFullYear()}-${d.getMonth() + 1}`;
+  if (rateCache[key] != null) return rateCache[key];
+  // fallback defaults
+  if (currency === "GBP") return 1.15;
+  if (currency === "RON") return 0.20;
+  return 1;
+}
+
+/** @deprecated use getToEurRate */
+export function getGbpToEurRate(date: string | Date): number {
+  return getToEurRate("GBP", date);
 }
 
 /**

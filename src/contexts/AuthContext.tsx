@@ -19,6 +19,7 @@ interface AuthContextType {
   isOfficeAdmin: boolean;
   isPM: boolean;
   isExecutiveViewer: boolean;
+  isReporter: boolean;
   canEdit: boolean;
 }
 

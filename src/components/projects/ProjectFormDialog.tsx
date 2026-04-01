@@ -245,6 +245,19 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
             </div>
           </div>
 
+          {/* Row 6: Default Rates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Default Bill Rate ($/hr)</Label>
+              <Input type="number" step="0.01" value={form.default_bill_rate} onChange={(e) => update("default_bill_rate", e.target.value)} placeholder="Inherit from resource" />
+              <p className="text-xs text-muted-foreground">Applies to all members unless individually overridden</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Default Cost Rate ($/hr)</Label>
+              <Input type="number" step="0.01" value={form.default_cost_rate} onChange={(e) => update("default_cost_rate", e.target.value)} placeholder="Inherit from resource" />
+              <p className="text-xs text-muted-foreground">Rate hierarchy: Member → Project → Resource</p>
+            </div>
+          </div>
           {/* Description */}
           <div className="space-y-1.5">
             <Label>Description</Label>

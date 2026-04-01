@@ -92,7 +92,6 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         end_date: values.end_date || null,
         total_budget: values.total_budget ? parseFloat(values.total_budget) : null,
         planned_budget: values.planned_budget ? parseFloat(values.planned_budget) : null,
-        revised_budget: values.revised_budget ? parseFloat(values.revised_budget) : null,
         currency: values.currency,
         pm_resource_id: values.pm_resource_id || null,
         revenue_model: values.revenue_model || null,

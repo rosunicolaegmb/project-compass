@@ -222,73 +222,46 @@ export default function ProjectDetail() {
     );
   }
 
-  // === Financial Calculations ===
-  const totalBudget = Number(project.total_budget || 0);
-  const plannedBudget = Number(project.planned_budget || totalBudget);
-  const revisedBudget = Number(project.revised_budget || plannedBudget);
+  // === Financial Calculations via Budget Engine ===
+  const metrics = calculateBudgetMetrics({
+    projectType: project.project_type as "time_and_materials" | "fixed_price",
+    totalBudget: Number(project.total_budget || 0),
+    plannedBudget: Number(project.planned_budget || project.total_budget || 0),
+    revisedBudget: Number(project.revised_budget || project.planned_budget || project.total_budget || 0),
+    plannedHours: phases.reduce((s: number, p: any) => s + Number(p.budget_hours || 0), 0),
+    plannedCost: phases.reduce((s: number, p: any) => s + Number(p.budget_amount || 0), 0),
+    timeEntries: timeEntries.map((t: any) => ({
+      hours: Number(t.hours || 0),
+      costRate: Number(t.cost_rate || 0),
+      billRate: Number(t.bill_rate || 0),
+      isBillable: t.is_billable,
+      approvalStatus: t.approval_status,
+    })),
+    expenses: expenses.map((e: any) => ({
+      amount: Number(e.amount || 0),
+      isBillable: e.is_billable,
+      approvalStatus: e.approval_status,
+    })),
+    forecastLaborCost: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_cost || 0), 0),
+    forecastLaborRevenue: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_revenue || 0), 0),
+    forecastExpenses: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_expenses || 0), 0),
+    forecastHours: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_hours || 0), 0),
+  });
 
-  // Phase-level planned
-  const plannedCostFromPhases = phases.reduce((sum: number, p: any) => sum + Number(p.budget_amount || 0), 0);
-  const plannedHoursFromPhases = phases.reduce((sum: number, p: any) => sum + Number(p.budget_hours || 0), 0);
-
-  // Actual from time entries
-  const actualHours = timeEntries.reduce((sum: number, t: any) => sum + Number(t.hours || 0), 0);
-  const actualLaborCost = timeEntries.reduce((sum: number, t: any) => sum + Number(t.hours || 0) * Number(t.cost_rate || 0), 0);
-  const actualLaborRevenue = timeEntries.reduce((sum: number, t: any) => sum + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
-
-  // Actual from expenses
-  const actualExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-
-  // Totals
-  const actualCost = actualLaborCost + actualExpenses;
-  const actualRevenue = actualLaborRevenue;
-
-  // Forecast from monthly forecasts
-  const forecastLaborCost = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_labor_cost || 0), 0);
-  const forecastExpenses = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_expenses || 0), 0);
-  const forecastLaborRevenue = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_labor_revenue || 0), 0);
-  const forecastHours = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_hours || 0), 0);
-  const forecastCost = forecastLaborCost + forecastExpenses || actualCost;
-  const forecastRevenue = forecastLaborRevenue || actualRevenue;
-
-  // KPIs
-  const remainingBudget = revisedBudget - actualCost;
-  const burnRate = actualHours > 0 && plannedHoursFromPhases > 0
-    ? (actualHours / plannedHoursFromPhases) * 100
-    : 0;
-  const costToComplete = forecastCost > actualCost ? forecastCost - actualCost : 0;
-  const estimateAtCompletion = actualCost + costToComplete;
-  const grossMargin = actualRevenue > 0
-    ? ((actualRevenue - actualCost) / actualRevenue) * 100
-    : 0;
-  const marginAtCompletion = forecastRevenue > 0
-    ? ((forecastRevenue - forecastCost) / forecastRevenue) * 100
-    : 0;
-  const budgetConsumed = revisedBudget > 0 ? (actualCost / revisedBudget) * 100 : 0;
-  const forecastConsumed = revisedBudget > 0 ? (forecastCost / revisedBudget) * 100 : 0;
+  const isT_M = project.project_type === "time_and_materials";
 
   // Health indicators
+  const healthIcon = (status: HealthStatus) => {
+    if (status === "green") return <CheckCircle2 className="h-5 w-5 text-success shrink-0" />;
+    if (status === "amber") return <AlertTriangle className="h-5 w-5 text-warning shrink-0" />;
+    return <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />;
+  };
+
   const healthItems = [
-    {
-      label: "Budget Health",
-      status: budgetConsumed > 90 ? "critical" : budgetConsumed > 75 ? "warning" : "good",
-      detail: `${fmtPct(budgetConsumed)} consumed`,
-    },
-    {
-      label: "Margin Health",
-      status: grossMargin < 10 ? "critical" : grossMargin < 20 ? "warning" : "good",
-      detail: `${fmtPct(grossMargin)} gross margin`,
-    },
-    {
-      label: "Burn Rate",
-      status: burnRate > 100 ? "critical" : burnRate > 85 ? "warning" : "good",
-      detail: `${fmtPct(burnRate)} of planned hours`,
-    },
-    {
-      label: "Forecast Variance",
-      status: forecastConsumed > 100 ? "critical" : forecastConsumed > 90 ? "warning" : "good",
-      detail: `EAC: ${fmt(estimateAtCompletion)}`,
-    },
+    { label: "Budget", status: metrics.budgetHealth, detail: `${fmtPct(metrics.budgetConsumedPct)} consumed` },
+    { label: "Margin", status: metrics.marginHealth, detail: `${fmtPct(metrics.grossMargin)} gross margin` },
+    { label: "Burn Rate", status: metrics.burnHealth, detail: `${fmtPct(metrics.burnRatePct)} of planned hours` },
+    { label: "Forecast", status: metrics.forecastHealth, detail: `EAC: ${fmt(metrics.estimateAtCompletion)}` },
   ];
 
   const clientName = (project.clients as any)?.name || "—";

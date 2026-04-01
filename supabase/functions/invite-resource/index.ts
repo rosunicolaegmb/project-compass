@@ -117,9 +117,9 @@ Deno.serve(async (req) => {
     }
 
     // Invite user via Supabase Auth
-    const signupUrl = redirect_url
-      ? `${redirect_url}?email=${encodeURIComponent(resource.email)}&tab=signup`
-      : undefined;
+    // Use the app's published URL for redirect so users land on the app, not Lovable
+    const appUrl = redirect_url || "https://forecast-compass-hub.lovable.app/auth";
+    const signupUrl = `${appUrl}?email=${encodeURIComponent(resource.email)}&tab=signup`;
 
     const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
       resource.email,

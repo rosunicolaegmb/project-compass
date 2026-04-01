@@ -68,13 +68,13 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   useEffect(() => {
     if (open) {
       form.reset({
-        resource_id: "", project_id: "", phase_id: "",
+        resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         month: format(new Date(), "yyyy-MM"),
         hours: 8, is_billable: true, description: "",
         bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
       });
     }
-  }, [open, form]);
+  }, [open, form, reporterResourceId]);
 
   const watchProjectId = form.watch("project_id");
   const watchMonth = form.watch("month");

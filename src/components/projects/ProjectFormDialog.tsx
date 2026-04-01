@@ -42,7 +42,7 @@ interface ProjectFormDialogProps {
 const EMPTY_FORM = {
   client_id: "", name: "", code: "", project_type: "time_and_materials" as const,
   status: "draft" as const, description: "", start_date: "", end_date: "",
-  total_budget: "", planned_budget: "", revised_budget: "", currency: "USD",
+  total_budget: "", planned_budget: "", currency: "USD",
   pm_resource_id: "", revenue_model: "", notes: "",
   default_bill_rate: "", default_cost_rate: "",
 };

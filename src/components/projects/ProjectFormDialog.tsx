@@ -23,7 +23,6 @@ const projectSchema = z.object({
   end_date: z.string().optional().or(z.literal("")),
   total_budget: z.string().optional().or(z.literal("")),
   planned_budget: z.string().optional().or(z.literal("")),
-  revised_budget: z.string().optional().or(z.literal("")),
   currency: z.string().min(1).max(5),
   pm_resource_id: z.string().optional().or(z.literal("")),
   revenue_model: z.string().trim().max(100).optional().or(z.literal("")),

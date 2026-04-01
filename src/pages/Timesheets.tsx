@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditModule } from "@/lib/auth-helpers";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TimeEntryFormDialog } from "@/components/timesheets/TimeEntryFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { saveFilters, loadFilters } from "@/lib/filters";
+import { exportToCsv } from "@/lib/csv-export";
+import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download } from "lucide-react";
 import { toast } from "sonner";
 import {
   startOfWeek, endOfWeek, addWeeks, subWeeks, format, parseISO,

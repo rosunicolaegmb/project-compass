@@ -199,10 +199,10 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label>PM Owner</Label>
-              <Select value={form.pm_resource_id} onValueChange={(v) => update("pm_resource_id", v)}>
+              <Select value={form.pm_resource_id || "__none__"} onValueChange={(v) => update("pm_resource_id", v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Select PM" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {resources.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.display_name}</SelectItem>)}
                 </SelectContent>
               </Select>

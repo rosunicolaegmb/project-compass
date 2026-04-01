@@ -119,13 +119,13 @@ export default function Dashboard() {
     const allProjectIds = new Set(projects.map((p: any) => p.id));
 
     // Budget totals
-    const totalPlannedBudget = projects.reduce((s: number, p: any) => s + Number(p.planned_budget || p.total_budget || 0), 0);
+    const totalPlannedBudget = projects.reduce((s: number, p: any) => s + toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString()), 0);
 
-    // Actuals
-    const totalActualCost = filteredTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)
-      + filteredExpenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    // Actuals (convert to EUR)
+    const totalActualCost = filteredTime.reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date), 0)
+      + filteredExpenses.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
     const totalActualRevenue = filteredTime.filter((t: any) => t.is_billable)
-      .reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
+      .reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
 
     // Forecast
     const totalForecastCost = forecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_cost || 0) + Number(f.forecast_expenses || 0), 0) || totalActualCost;

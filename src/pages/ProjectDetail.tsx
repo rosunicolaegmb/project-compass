@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditModule } from "@/lib/auth-helpers";
+import { cn } from "@/lib/utils";
+import { calculateBudgetMetrics, type HealthStatus } from "@/lib/budget-calculations";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
@@ -18,7 +20,7 @@ import { PhaseFormDialog } from "@/components/phases/PhaseFormDialog";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Pencil, Trash2, DollarSign, TrendingUp, Clock,
-  AlertTriangle, CheckCircle2, BarChart3, Users, Receipt, Calendar,
+  AlertTriangle, CheckCircle2, BarChart3, Users, Receipt, Calendar, Target, Percent,
 } from "lucide-react";
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
@@ -221,73 +223,46 @@ export default function ProjectDetail() {
     );
   }
 
-  // === Financial Calculations ===
-  const totalBudget = Number(project.total_budget || 0);
-  const plannedBudget = Number(project.planned_budget || totalBudget);
-  const revisedBudget = Number(project.revised_budget || plannedBudget);
+  // === Financial Calculations via Budget Engine ===
+  const metrics = calculateBudgetMetrics({
+    projectType: project.project_type as "time_and_materials" | "fixed_price",
+    totalBudget: Number(project.total_budget || 0),
+    plannedBudget: Number(project.planned_budget || project.total_budget || 0),
+    revisedBudget: Number(project.revised_budget || project.planned_budget || project.total_budget || 0),
+    plannedHours: phases.reduce((s: number, p: any) => s + Number(p.budget_hours || 0), 0),
+    plannedCost: phases.reduce((s: number, p: any) => s + Number(p.budget_amount || 0), 0),
+    timeEntries: timeEntries.map((t: any) => ({
+      hours: Number(t.hours || 0),
+      costRate: Number(t.cost_rate || 0),
+      billRate: Number(t.bill_rate || 0),
+      isBillable: t.is_billable,
+      approvalStatus: t.approval_status,
+    })),
+    expenses: expenses.map((e: any) => ({
+      amount: Number(e.amount || 0),
+      isBillable: e.is_billable,
+      approvalStatus: e.approval_status,
+    })),
+    forecastLaborCost: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_cost || 0), 0),
+    forecastLaborRevenue: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_revenue || 0), 0),
+    forecastExpenses: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_expenses || 0), 0),
+    forecastHours: monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_hours || 0), 0),
+  });
 
-  // Phase-level planned
-  const plannedCostFromPhases = phases.reduce((sum: number, p: any) => sum + Number(p.budget_amount || 0), 0);
-  const plannedHoursFromPhases = phases.reduce((sum: number, p: any) => sum + Number(p.budget_hours || 0), 0);
-
-  // Actual from time entries
-  const actualHours = timeEntries.reduce((sum: number, t: any) => sum + Number(t.hours || 0), 0);
-  const actualLaborCost = timeEntries.reduce((sum: number, t: any) => sum + Number(t.hours || 0) * Number(t.cost_rate || 0), 0);
-  const actualLaborRevenue = timeEntries.reduce((sum: number, t: any) => sum + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
-
-  // Actual from expenses
-  const actualExpenses = expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-
-  // Totals
-  const actualCost = actualLaborCost + actualExpenses;
-  const actualRevenue = actualLaborRevenue;
-
-  // Forecast from monthly forecasts
-  const forecastLaborCost = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_labor_cost || 0), 0);
-  const forecastExpenses = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_expenses || 0), 0);
-  const forecastLaborRevenue = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_labor_revenue || 0), 0);
-  const forecastHours = monthlyForecasts.reduce((sum: number, f: any) => sum + Number(f.forecast_hours || 0), 0);
-  const forecastCost = forecastLaborCost + forecastExpenses || actualCost;
-  const forecastRevenue = forecastLaborRevenue || actualRevenue;
-
-  // KPIs
-  const remainingBudget = revisedBudget - actualCost;
-  const burnRate = actualHours > 0 && plannedHoursFromPhases > 0
-    ? (actualHours / plannedHoursFromPhases) * 100
-    : 0;
-  const costToComplete = forecastCost > actualCost ? forecastCost - actualCost : 0;
-  const estimateAtCompletion = actualCost + costToComplete;
-  const grossMargin = actualRevenue > 0
-    ? ((actualRevenue - actualCost) / actualRevenue) * 100
-    : 0;
-  const marginAtCompletion = forecastRevenue > 0
-    ? ((forecastRevenue - forecastCost) / forecastRevenue) * 100
-    : 0;
-  const budgetConsumed = revisedBudget > 0 ? (actualCost / revisedBudget) * 100 : 0;
-  const forecastConsumed = revisedBudget > 0 ? (forecastCost / revisedBudget) * 100 : 0;
+  const isT_M = project.project_type === "time_and_materials";
 
   // Health indicators
+  const healthIcon = (status: HealthStatus) => {
+    if (status === "green") return <CheckCircle2 className="h-5 w-5 text-success shrink-0" />;
+    if (status === "amber") return <AlertTriangle className="h-5 w-5 text-warning shrink-0" />;
+    return <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />;
+  };
+
   const healthItems = [
-    {
-      label: "Budget Health",
-      status: budgetConsumed > 90 ? "critical" : budgetConsumed > 75 ? "warning" : "good",
-      detail: `${fmtPct(budgetConsumed)} consumed`,
-    },
-    {
-      label: "Margin Health",
-      status: grossMargin < 10 ? "critical" : grossMargin < 20 ? "warning" : "good",
-      detail: `${fmtPct(grossMargin)} gross margin`,
-    },
-    {
-      label: "Burn Rate",
-      status: burnRate > 100 ? "critical" : burnRate > 85 ? "warning" : "good",
-      detail: `${fmtPct(burnRate)} of planned hours`,
-    },
-    {
-      label: "Forecast Variance",
-      status: forecastConsumed > 100 ? "critical" : forecastConsumed > 90 ? "warning" : "good",
-      detail: `EAC: ${fmt(estimateAtCompletion)}`,
-    },
+    { label: "Budget", status: metrics.budgetHealth, detail: `${fmtPct(metrics.budgetConsumedPct)} consumed` },
+    { label: "Margin", status: metrics.marginHealth, detail: `${fmtPct(metrics.grossMargin)} gross margin` },
+    { label: "Burn Rate", status: metrics.burnHealth, detail: `${fmtPct(metrics.burnRatePct)} of planned hours` },
+    { label: "Forecast", status: metrics.forecastHealth, detail: `EAC: ${fmt(metrics.estimateAtCompletion)}` },
   ];
 
   const clientName = (project.clients as any)?.name || "—";
@@ -327,34 +302,65 @@ export default function ProjectDetail() {
         </span>
       </div>
 
-      {/* Financial KPI Cards */}
+      {/* Financial KPI Cards — differentiated by project type */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <StatCard title="Budget" value={fmt(revisedBudget)} icon={DollarSign} iconColor="bg-primary/10" />
-        <StatCard title="Actual Cost" value={fmt(actualCost)} icon={DollarSign} iconColor="bg-primary/10"
-          change={fmtPct(budgetConsumed) + " consumed"} changeType={budgetConsumed > 90 ? "negative" : "neutral"} />
-        <StatCard title="Remaining" value={fmt(remainingBudget)} icon={DollarSign} iconColor="bg-success/10"
-          changeType={remainingBudget < 0 ? "negative" : "positive"} />
-        <StatCard title="Actual Revenue" value={fmt(actualRevenue)} icon={TrendingUp} iconColor="bg-primary/10" />
-        <StatCard title="Gross Margin" value={fmtPct(grossMargin)} icon={BarChart3} iconColor="bg-primary/10"
-          changeType={grossMargin < 15 ? "negative" : "positive"} />
-        <StatCard title="Burn Rate" value={fmtPct(burnRate)} icon={Clock} iconColor="bg-warning/10"
-          change={fmtHrs(actualHours) + " logged"} changeType={burnRate > 100 ? "negative" : "neutral"} />
-        <StatCard title="EAC" value={fmt(estimateAtCompletion)} icon={TrendingUp} iconColor="bg-primary/10"
-          change={`CTC: ${fmt(costToComplete)}`} changeType={estimateAtCompletion > revisedBudget ? "negative" : "positive"} />
+        <StatCard title="Budget" value={fmt(metrics.revisedBudget)} icon={DollarSign} iconColor="bg-primary/10" />
+        <StatCard title="Actual Cost" value={fmt(metrics.actualCost)} icon={DollarSign} iconColor="bg-primary/10"
+          change={fmtPct(metrics.budgetConsumedPct) + " consumed"} changeType={metrics.budgetConsumedPct > 90 ? "negative" : "neutral"} />
+        <StatCard title="Remaining" value={fmt(metrics.remainingBudget)} icon={DollarSign} iconColor="bg-success/10"
+          changeType={metrics.remainingBudget < 0 ? "negative" : "positive"} />
+        <StatCard title={isT_M ? "T&M Revenue" : "Contract Value"} value={fmt(metrics.actualRevenue)} icon={TrendingUp} iconColor="bg-primary/10" />
+        <StatCard title="Gross Margin" value={fmtPct(metrics.grossMargin)} icon={BarChart3} iconColor="bg-primary/10"
+          changeType={metrics.grossMargin < 15 ? "negative" : "positive"} />
+        <StatCard title="Burn Rate" value={fmtPct(metrics.burnRatePct)} icon={Clock} iconColor="bg-warning/10"
+          change={fmtHrs(metrics.totalHours) + " logged"} changeType={metrics.burnRatePct > 100 ? "negative" : "neutral"} />
+        <StatCard title="EAC" value={fmt(metrics.estimateAtCompletion)} icon={TrendingUp} iconColor="bg-primary/10"
+          change={`CTC: ${fmt(metrics.costToComplete)}`} changeType={metrics.estimateAtCompletion > metrics.revisedBudget ? "negative" : "positive"} />
       </div>
 
-      {/* Health Indicators */}
+      {/* T&M-specific metrics */}
+      {isT_M && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="Blended Bill Rate" value={fmt(metrics.blendedBillRate)} icon={DollarSign} iconColor="bg-primary/10" change="/hr" changeType="neutral" />
+          <StatCard title="Blended Cost Rate" value={fmt(metrics.blendedCostRate)} icon={DollarSign} iconColor="bg-primary/10" change="/hr" changeType="neutral" />
+          <StatCard title="Billable Realization" value={fmtPct(metrics.billableRealization)} icon={Percent} iconColor="bg-primary/10"
+            change={`${metrics.billableHours.toLocaleString()} / ${metrics.totalHours.toLocaleString()} hrs`} changeType={metrics.billableRealization < 70 ? "negative" : "positive"} />
+          <StatCard title="Approved Billable Hrs" value={fmtHrs(metrics.approvedBillableHours)} icon={Target} iconColor="bg-success/10" />
+        </div>
+      )}
+
+      {/* FP-specific metrics */}
+      {!isT_M && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="Contract Value" value={fmt(Number(project.total_budget || 0))} icon={Target} iconColor="bg-primary/10" />
+          <StatCard title="Profitability" value={fmt(metrics.actualRevenue - metrics.actualCost)} icon={TrendingUp} iconColor="bg-success/10"
+            changeType={metrics.actualRevenue - metrics.actualCost < 0 ? "negative" : "positive"} />
+          <StatCard title="Cost to Complete" value={fmt(metrics.costToComplete)} icon={DollarSign} iconColor="bg-warning/10" />
+          <StatCard title="Margin at Completion" value={fmtPct(metrics.marginAtCompletion)} icon={BarChart3} iconColor="bg-primary/10"
+            changeType={metrics.marginAtCompletion < 15 ? "negative" : "positive"} />
+        </div>
+      )}
+
+      {/* Health Indicators with overall status */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Health Indicators</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Health Indicators</CardTitle>
+            <Badge variant="outline" className={cn(
+              "text-xs font-medium capitalize",
+              metrics.overallHealth === "green" && "bg-success/10 text-success border-success/20",
+              metrics.overallHealth === "amber" && "bg-warning/10 text-warning border-warning/20",
+              metrics.overallHealth === "red" && "bg-destructive/10 text-destructive border-destructive/20",
+            )}>
+              {metrics.overallHealth === "green" ? "Healthy" : metrics.overallHealth === "amber" ? "At Risk" : "Critical"}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {healthItems.map((h) => (
               <div key={h.label} className="flex items-center gap-3">
-                {h.status === "good" && <CheckCircle2 className="h-5 w-5 text-success shrink-0" />}
-                {h.status === "warning" && <AlertTriangle className="h-5 w-5 text-warning shrink-0" />}
-                {h.status === "critical" && <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />}
+                {healthIcon(h.status)}
                 <div>
                   <p className="text-sm font-medium">{h.label}</p>
                   <p className="text-xs text-muted-foreground">{h.detail}</p>
@@ -672,19 +678,19 @@ export default function ProjectDetail() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Forecast Revenue</p>
-                  <p className="text-lg font-semibold">{fmt(forecastRevenue)}</p>
+                  <p className="text-lg font-semibold">{fmt(metrics.forecastRevenue)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Forecast Cost</p>
-                  <p className="text-lg font-semibold">{fmt(forecastCost)}</p>
+                  <p className="text-lg font-semibold">{fmt(metrics.forecastCost)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Forecast Hours</p>
-                  <p className="text-lg font-semibold">{fmtHrs(forecastHours)}</p>
+                  <p className="text-lg font-semibold">{fmtHrs(metrics.forecastCost > 0 ? monthlyForecasts.reduce((s: number, f: any) => s + Number(f.forecast_hours || 0), 0) : 0)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Margin at Completion</p>
-                  <p className="text-lg font-semibold">{fmtPct(marginAtCompletion)}</p>
+                  <p className="text-lg font-semibold">{fmtPct(metrics.marginAtCompletion)}</p>
                 </div>
               </div>
               {monthlyForecasts.length > 0 && (

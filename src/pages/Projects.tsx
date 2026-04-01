@@ -25,6 +25,7 @@ const STATUS_OPTIONS = ["draft", "active", "on_hold", "completed", "archived", "
 export default function Projects() {
   const { roles } = useAuth();
   const canEdit = canEditModule(roles, "projects");
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterClient, setFilterClient] = useState<string>("all");

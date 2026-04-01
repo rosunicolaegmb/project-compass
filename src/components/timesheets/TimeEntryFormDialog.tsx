@@ -18,6 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 
 const schema = z.object({
   resource_id: z.string().min(1, "Resource is required"),
@@ -29,6 +31,7 @@ const schema = z.object({
   description: z.string().max(500).optional(),
   bill_rate: z.coerce.number().min(0).optional(),
   cost_rate: z.coerce.number().min(0).optional(),
+  currency: z.string().default("EUR"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -50,12 +53,14 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
     resolver: zodResolver(schema),
     defaultValues: {
       resource_id: "", project_id: "", phase_id: "", entry_date: new Date().toISOString().split("T")[0],
-      hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0,
+      hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
     },
   });
 
   const watchProjectId = form.watch("project_id");
+  const watchCurrency = form.watch("currency");
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
+  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
 
   useEffect(() => {
     if (entry) {
@@ -69,17 +74,18 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
         description: entry.description || "",
         bill_rate: Number(entry.bill_rate || 0),
         cost_rate: Number(entry.cost_rate || 0),
+        currency: entry.currency || "EUR",
       });
     } else {
       form.reset({
         resource_id: "", project_id: "", phase_id: "",
         entry_date: new Date().toISOString().split("T")[0],
-        hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0,
+        hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
       });
     }
   }, [entry, form, open]);
 
-  // Auto-fill rates when resource changes
+  // Auto-fill rates and currency when resource changes
   const watchResourceId = form.watch("resource_id");
   useEffect(() => {
     if (watchResourceId && !isEditing) {
@@ -87,13 +93,14 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
       if (resource) {
         form.setValue("bill_rate", Number(resource.default_bill_rate || 0));
         form.setValue("cost_rate", Number(resource.default_cost_rate || 0));
+        form.setValue("currency", resource.currency || "EUR");
       }
     }
   }, [watchResourceId, resources, form, isEditing]);
 
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
-      // Duplicate check (same resource/project/phase/date)
+      // Duplicate check
       if (!isEditing) {
         const dupQuery = supabase
           .from("time_entries")
@@ -125,6 +132,7 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
         description: values.description || null,
         bill_rate: values.bill_rate || null,
         cost_rate: values.cost_rate || null,
+        currency: values.currency,
       };
 
       if (isEditing) {
@@ -211,17 +219,26 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
                 </FormItem>
               )} />
             </div>
+            <FormField control={form.control} name="currency" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rate Currency</FormLabel>
+                <FormControl>
+                  <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="cost_rate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cost Rate ($/hr)</FormLabel>
+                  <FormLabel>Cost Rate ({sym}/hr)</FormLabel>
                   <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill Rate ($/hr)</FormLabel>
+                  <FormLabel>Bill Rate ({sym}/hr)</FormLabel>
                   <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>

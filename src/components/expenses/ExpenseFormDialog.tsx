@@ -18,6 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 
 const CATEGORIES = [
   { value: "travel", label: "Travel" },
@@ -39,7 +41,7 @@ const schema = z.object({
   expense_date: z.string().min(1, "Date is required"),
   category: z.string().min(1, "Category is required"),
   amount: z.coerce.number().min(0.01, "Amount must be positive"),
-  currency: z.string().default("USD"),
+  currency: z.string().default("EUR"),
   is_billable: z.boolean().default(true),
   description: z.string().max(500).optional(),
 });
@@ -63,12 +65,14 @@ export function ExpenseFormDialog({ open, onOpenChange, entry, resources, projec
     resolver: zodResolver(schema),
     defaultValues: {
       resource_id: "", project_id: "", phase_id: "", expense_date: new Date().toISOString().split("T")[0],
-      category: "other", amount: 0, currency: "USD", is_billable: true, description: "",
+      category: "other", amount: 0, currency: "EUR", is_billable: true, description: "",
     },
   });
 
   const watchProjectId = form.watch("project_id");
+  const watchCurrency = form.watch("currency");
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
+  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
 
   useEffect(() => {
     if (entry) {
@@ -79,7 +83,7 @@ export function ExpenseFormDialog({ open, onOpenChange, entry, resources, projec
         expense_date: entry.expense_date || "",
         category: entry.category || "other",
         amount: Number(entry.amount || 0),
-        currency: entry.currency || "USD",
+        currency: entry.currency || "EUR",
         is_billable: entry.is_billable ?? true,
         description: entry.description || "",
       });
@@ -87,7 +91,7 @@ export function ExpenseFormDialog({ open, onOpenChange, entry, resources, projec
       form.reset({
         resource_id: "", project_id: "", phase_id: "",
         expense_date: new Date().toISOString().split("T")[0],
-        category: "other", amount: 0, currency: "USD", is_billable: true, description: "",
+        category: "other", amount: 0, currency: "EUR", is_billable: true, description: "",
       });
     }
   }, [entry, form, open]);
@@ -197,10 +201,10 @@ export function ExpenseFormDialog({ open, onOpenChange, entry, resources, projec
                 </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <FormField control={form.control} name="amount" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount *</FormLabel>
+                <FormItem className="col-span-2">
+                  <FormLabel>Amount ({sym}) *</FormLabel>
                   <FormControl><Input type="number" step="0.01" min="0.01" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -208,15 +212,9 @@ export function ExpenseFormDialog({ open, onOpenChange, entry, resources, projec
               <FormField control={form.control} name="currency" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Currency</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="CAD">CAD</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

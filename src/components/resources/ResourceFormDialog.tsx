@@ -12,12 +12,13 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 
 const schema = z.object({
   display_name: z.string().min(1, "Full name is required"),
@@ -31,6 +32,7 @@ const schema = z.object({
   default_cost_rate: z.coerce.number().min(0).optional(),
   monthly_cost: z.coerce.number().min(0).optional(),
   overhead_cost_eur: z.coerce.number().min(0).optional(),
+  currency: z.string().default("EUR"),
   hire_date: z.string().optional(),
   is_active: z.boolean().default(true),
 });
@@ -53,7 +55,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
     defaultValues: {
       display_name: "", email: "", job_title: "", department: "", employee_id: "",
       employment_type: "full_time", delivery_role_id: "", default_bill_rate: 0,
-      default_cost_rate: 0, monthly_cost: 0, overhead_cost_eur: 0, hire_date: "", is_active: true,
+      default_cost_rate: 0, monthly_cost: 0, overhead_cost_eur: 0, currency: "EUR", hire_date: "", is_active: true,
     },
   });
 
@@ -71,6 +73,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         default_cost_rate: Number(resource.default_cost_rate || 0),
         monthly_cost: Number(resource.monthly_cost || 0),
         overhead_cost_eur: Number(resource.overhead_cost_eur || 0),
+        currency: resource.currency || "EUR",
         hire_date: resource.hire_date || "",
         is_active: resource.is_active ?? true,
       });
@@ -78,7 +81,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
       form.reset({
         display_name: "", email: "", job_title: "", department: "", employee_id: "",
         employment_type: "full_time", delivery_role_id: "", default_bill_rate: 0,
-        default_cost_rate: 0, monthly_cost: 0, overhead_cost_eur: 0, hire_date: "", is_active: true,
+        default_cost_rate: 0, monthly_cost: 0, overhead_cost_eur: 0, currency: "EUR", hire_date: "", is_active: true,
       });
     }
   }, [resource, form, open]);
@@ -97,6 +100,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         default_cost_rate: values.default_cost_rate || null,
         monthly_cost: values.monthly_cost || null,
         overhead_cost_eur: values.overhead_cost_eur || null,
+        currency: values.currency,
         hire_date: values.hire_date || null,
         is_active: values.is_active,
       };
@@ -122,7 +126,9 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
   };
 
   const employmentType = form.watch("employment_type");
+  const watchCurrency = form.watch("currency");
   const isFullTime = employmentType === "full_time";
+  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -201,18 +207,27 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                 </FormItem>
               )} />
             </div>
+            <FormField control={form.control} name="currency" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rate Currency</FormLabel>
+                <FormControl>
+                  <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             {isFullTime ? (
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="monthly_cost" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monthly Cost ($/mo)</FormLabel>
+                    <FormLabel>Monthly Cost ({sym}/mo)</FormLabel>
                     <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Default Bill Rate ($/hr)</FormLabel>
+                    <FormLabel>Default Bill Rate ({sym}/hr)</FormLabel>
                     <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -222,14 +237,14 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="default_cost_rate" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Default Cost Rate ($/hr)</FormLabel>
+                    <FormLabel>Default Cost Rate ({sym}/hr)</FormLabel>
                     <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Default Bill Rate ($/hr)</FormLabel>
+                    <FormLabel>Default Bill Rate ({sym}/hr)</FormLabel>
                     <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>

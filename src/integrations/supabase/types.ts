@@ -485,6 +485,7 @@ export type Database = {
           bill_rate_override: number | null
           cost_rate_override: number | null
           created_at: string
+          currency: string
           delivery_role_id: string | null
           end_date: string | null
           id: string
@@ -498,6 +499,7 @@ export type Database = {
           bill_rate_override?: number | null
           cost_rate_override?: number | null
           created_at?: string
+          currency?: string
           delivery_role_id?: string | null
           end_date?: string | null
           id?: string
@@ -511,6 +513,7 @@ export type Database = {
           bill_rate_override?: number | null
           cost_rate_override?: number | null
           created_at?: string
+          currency?: string
           delivery_role_id?: string | null
           end_date?: string | null
           id?: string
@@ -741,6 +744,7 @@ export type Database = {
           bill_rate: number
           cost_rate: number
           created_at: string
+          currency: string
           delivery_role_id: string | null
           effective_from: string
           effective_to: string | null
@@ -753,6 +757,7 @@ export type Database = {
           bill_rate: number
           cost_rate: number
           created_at?: string
+          currency?: string
           delivery_role_id?: string | null
           effective_from: string
           effective_to?: string | null
@@ -765,6 +770,7 @@ export type Database = {
           bill_rate?: number
           cost_rate?: number
           created_at?: string
+          currency?: string
           delivery_role_id?: string | null
           effective_from?: string
           effective_to?: string | null
@@ -793,6 +799,7 @@ export type Database = {
       resources: {
         Row: {
           created_at: string
+          currency: string
           default_bill_rate: number | null
           default_cost_rate: number | null
           deleted_at: string | null
@@ -813,6 +820,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string
           default_bill_rate?: number | null
           default_cost_rate?: number | null
           deleted_at?: string | null
@@ -835,6 +843,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string
           default_bill_rate?: number | null
           default_cost_rate?: number | null
           deleted_at?: string | null
@@ -900,6 +909,7 @@ export type Database = {
           bill_rate: number | null
           cost_rate: number | null
           created_at: string
+          currency: string
           deleted_at: string | null
           description: string | null
           entry_date: string
@@ -918,6 +928,7 @@ export type Database = {
           bill_rate?: number | null
           cost_rate?: number | null
           created_at?: string
+          currency?: string
           deleted_at?: string | null
           description?: string | null
           entry_date: string
@@ -936,6 +947,7 @@ export type Database = {
           bill_rate?: number | null
           cost_rate?: number | null
           created_at?: string
+          currency?: string
           deleted_at?: string | null
           description?: string | null
           entry_date?: string

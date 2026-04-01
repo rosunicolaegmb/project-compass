@@ -59,7 +59,7 @@ export default function Dashboard() {
     queryKey: ["dash-projects"],
     queryFn: async () => {
       const { data, error } = await supabase.from("projects")
-        .select("id, name, status, project_type, total_budget, planned_budget, revised_budget, client_id, pm_resource_id, clients(name)")
+        .select("id, name, status, project_type, total_budget, planned_budget, client_id, pm_resource_id, clients(name)")
         .is("deleted_at", null);
       if (error) throw error;
       return data;
@@ -123,7 +123,6 @@ export default function Dashboard() {
 
     // Budget totals
     const totalPlannedBudget = projects.reduce((s: number, p: any) => s + Number(p.planned_budget || p.total_budget || 0), 0);
-    const totalRevisedBudget = projects.reduce((s: number, p: any) => s + Number(p.revised_budget || p.planned_budget || p.total_budget || 0), 0);
 
     // Actuals
     const totalActualCost = filteredTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)
@@ -144,7 +143,7 @@ export default function Dashboard() {
       const pExp = filteredExpenses.filter((e: any) => e.project_id === p.id);
       const cost = pTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0) + pExp.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
       const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
-      const budget = Number(p.revised_budget || p.planned_budget || p.total_budget || 0);
+      const budget = Number(p.planned_budget || p.total_budget || 0);
       const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
       const budgetUsed = budget > 0 ? (cost / budget) * 100 : 0;
       const hasTime = pTime.length > 0;
@@ -204,7 +203,7 @@ export default function Dashboard() {
     ];
 
     return {
-      totalPlannedBudget, totalRevisedBudget, totalActualCost, totalForecastCost,
+      totalPlannedBudget, totalActualCost, totalForecastCost,
       totalActualRevenue, totalForecastRevenue, grossMargin,
       activeCount: activeProjects.length,
       overBudgetProjects, atRiskProjects, missingTimesheets,
@@ -246,8 +245,7 @@ export default function Dashboard() {
       {/* ── Row 1: Financial KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <KpiCard label="Planned Budget" value={fmt(metrics.totalPlannedBudget)} icon={Target} />
-        <KpiCard label="Revised Budget" value={fmt(metrics.totalRevisedBudget)} sub={metrics.totalRevisedBudget !== metrics.totalPlannedBudget ? `Δ ${fmt(metrics.totalRevisedBudget - metrics.totalPlannedBudget)}` : undefined} icon={DollarSign} />
-        <KpiCard label="Actual Cost" value={fmt(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalRevisedBudget > 0 ? (metrics.totalActualCost / metrics.totalRevisedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
+        <KpiCard label="Actual Cost" value={fmt(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalPlannedBudget > 0 ? (metrics.totalActualCost / metrics.totalPlannedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
         <KpiCard label="Forecast Cost" value={fmt(metrics.totalForecastCost)} icon={BarChart3} />
         <KpiCard label="Projected Revenue" value={fmt(metrics.totalForecastRevenue)} icon={TrendingUp} accent="bg-success/10" />
         <KpiCard label="Gross Margin" value={fmtPct(metrics.grossMargin)} icon={Percent} accent={metrics.grossMargin < 15 ? "bg-destructive/10" : "bg-success/10"} />

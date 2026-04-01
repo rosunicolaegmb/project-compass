@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type Status = "active" | "completed" | "on-hold" | "at-risk" | "draft" | "archived" | "approved" | "pending";
+type Status = "active" | "completed" | "on-hold" | "at-risk" | "draft" | "archived" | "approved" | "pending" | "sow_expired" | "cancelled";
 
 const statusStyles: Record<Status, string> = {
   active: "bg-success/10 text-success border-success/20",
@@ -12,6 +12,8 @@ const statusStyles: Record<Status, string> = {
   archived: "bg-muted text-muted-foreground border-border",
   approved: "bg-success/10 text-success border-success/20",
   pending: "bg-warning/10 text-warning border-warning/20",
+  sow_expired: "bg-destructive/10 text-destructive border-destructive/20",
+  cancelled: "bg-muted text-muted-foreground border-border",
 };
 
 export function StatusBadge({ status }: { status: Status }) {

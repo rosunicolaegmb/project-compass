@@ -47,7 +47,7 @@ export default function Forecasting() {
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("projects").select("id, name, total_budget, planned_budget, revised_budget, project_type, start_date, end_date").eq("is_active", true).is("deleted_at", null).order("name");
+      const { data, error } = await supabase.from("projects").select("id, name, total_budget, planned_budget, project_type, start_date, end_date").eq("is_active", true).is("deleted_at", null).order("name");
       if (error) throw error;
       return data;
     },

@@ -17,13 +17,12 @@ const projectSchema = z.object({
   name: z.string().trim().min(1, "Project name is required").max(200),
   code: z.string().trim().max(20).optional().or(z.literal("")),
   project_type: z.enum(["time_and_materials", "fixed_price"]),
-  status: z.enum(["draft", "active", "on_hold", "completed", "archived", "cancelled"]),
+  status: z.enum(["draft", "active", "on_hold", "completed", "archived", "cancelled", "sow_expired"]),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
   start_date: z.string().optional().or(z.literal("")),
   end_date: z.string().optional().or(z.literal("")),
   total_budget: z.string().optional().or(z.literal("")),
   planned_budget: z.string().optional().or(z.literal("")),
-  revised_budget: z.string().optional().or(z.literal("")),
   currency: z.string().min(1).max(5),
   pm_resource_id: z.string().optional().or(z.literal("")),
   revenue_model: z.string().trim().max(100).optional().or(z.literal("")),
@@ -43,7 +42,7 @@ interface ProjectFormDialogProps {
 const EMPTY_FORM = {
   client_id: "", name: "", code: "", project_type: "time_and_materials" as const,
   status: "draft" as const, description: "", start_date: "", end_date: "",
-  total_budget: "", planned_budget: "", revised_budget: "", currency: "USD",
+  total_budget: "", planned_budget: "", currency: "USD",
   pm_resource_id: "", revenue_model: "", notes: "",
   default_bill_rate: "", default_cost_rate: "",
 };
@@ -67,7 +66,6 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         end_date: project.end_date || "",
         total_budget: project.total_budget != null ? String(project.total_budget) : "",
         planned_budget: project.planned_budget != null ? String(project.planned_budget) : "",
-        revised_budget: project.revised_budget != null ? String(project.revised_budget) : "",
         currency: project.currency || "USD",
         pm_resource_id: project.pm_resource_id || "",
         revenue_model: project.revenue_model || "",
@@ -94,7 +92,6 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         end_date: values.end_date || null,
         total_budget: values.total_budget ? parseFloat(values.total_budget) : null,
         planned_budget: values.planned_budget ? parseFloat(values.planned_budget) : null,
-        revised_budget: values.revised_budget ? parseFloat(values.revised_budget) : null,
         currency: values.currency,
         pm_resource_id: values.pm_resource_id || null,
         revenue_model: values.revenue_model || null,
@@ -189,7 +186,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
                   <SelectItem value="on_hold">On Hold</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="sow_expired">SOW Expired</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -230,7 +228,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
           </div>
 
           {/* Row 5: Budgets */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Total Contract Value</Label>
               <Input type="number" step="0.01" value={form.total_budget} onChange={(e) => update("total_budget", e.target.value)} placeholder="0.00" />
@@ -238,10 +236,6 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
             <div className="space-y-1.5">
               <Label>Planned Budget</Label>
               <Input type="number" step="0.01" value={form.planned_budget} onChange={(e) => update("planned_budget", e.target.value)} placeholder="0.00" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Revised Budget</Label>
-              <Input type="number" step="0.01" value={form.revised_budget} onChange={(e) => update("revised_budget", e.target.value)} placeholder="0.00" />
             </div>
           </div>
 

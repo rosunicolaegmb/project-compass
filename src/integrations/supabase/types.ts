@@ -585,7 +585,6 @@ export type Database = {
           pm_resource_id: string | null
           project_type: Database["public"]["Enums"]["project_type"]
           revenue_model: string | null
-          revised_budget: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
           total_budget: number | null
@@ -609,7 +608,6 @@ export type Database = {
           pm_resource_id?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
           revenue_model?: string | null
-          revised_budget?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           total_budget?: number | null
@@ -633,7 +631,6 @@ export type Database = {
           pm_resource_id?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
           revenue_model?: string | null
-          revised_budget?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           total_budget?: number | null
@@ -1017,6 +1014,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_expire_sow_projects: { Args: never; Returns: undefined }
       get_resource_id_for_user: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -1054,6 +1052,7 @@ export type Database = {
         | "completed"
         | "archived"
         | "cancelled"
+        | "sow_expired"
       project_type: "time_and_materials" | "fixed_price"
     }
     CompositeTypes: {
@@ -1206,6 +1205,7 @@ export const Constants = {
         "completed",
         "archived",
         "cancelled",
+        "sow_expired",
       ],
       project_type: ["time_and_materials", "fixed_price"],
     },

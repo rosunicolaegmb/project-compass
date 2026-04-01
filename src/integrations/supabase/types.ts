@@ -757,7 +757,9 @@ export type Database = {
           delivery_role_id: string | null
           department: string | null
           display_name: string
+          email: string | null
           employee_id: string | null
+          employment_type: Database["public"]["Enums"]["employment_type"] | null
           hire_date: string | null
           id: string
           is_active: boolean
@@ -773,7 +775,11 @@ export type Database = {
           delivery_role_id?: string | null
           department?: string | null
           display_name: string
+          email?: string | null
           employee_id?: string | null
+          employment_type?:
+            | Database["public"]["Enums"]["employment_type"]
+            | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
@@ -789,7 +795,11 @@ export type Database = {
           delivery_role_id?: string | null
           department?: string | null
           display_name?: string
+          email?: string | null
           employee_id?: string | null
+          employment_type?:
+            | Database["public"]["Enums"]["employment_type"]
+            | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
@@ -1002,6 +1012,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "office_admin" | "pm" | "executive_viewer"
       approval_status: "pending" | "approved" | "rejected"
+      employment_type: "full_time" | "part_time" | "contractor" | "vendor"
       expense_category:
         | "travel"
         | "software"
@@ -1148,6 +1159,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "office_admin", "pm", "executive_viewer"],
       approval_status: ["pending", "approved", "rejected"],
+      employment_type: ["full_time", "part_time", "contractor", "vendor"],
       expense_category: [
         "travel",
         "software",

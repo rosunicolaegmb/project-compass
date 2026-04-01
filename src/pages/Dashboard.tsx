@@ -126,9 +126,9 @@ export default function Dashboard() {
     const totalRevisedBudget = projects.reduce((s: number, p: any) => s + Number(p.revised_budget || p.planned_budget || p.total_budget || 0), 0);
 
     // Actuals
-    const totalActualCost = timeEntries.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)
-      + expenseEntries.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-    const totalActualRevenue = timeEntries.filter((t: any) => t.is_billable)
+    const totalActualCost = filteredTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)
+      + filteredExpenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    const totalActualRevenue = filteredTime.filter((t: any) => t.is_billable)
       .reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
 
     // Forecast

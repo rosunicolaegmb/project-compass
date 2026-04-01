@@ -74,10 +74,12 @@ export default function Resources() {
     const rows = filtered.map((r: any) => [
       r.display_name, r.email || "", (r.delivery_roles as any)?.name || "",
       r.department || "", EMPLOYMENT_LABELS[r.employment_type] || "",
-      r.default_cost_rate || "", r.default_bill_rate || "",
+      r.employment_type === "full_time" ? (r.monthly_cost || "") : (r.default_cost_rate || ""),
+      r.default_bill_rate || "",
+      r.overhead_cost_eur || "",
       r.is_active ? "Active" : "Inactive",
     ]);
-    exportToCsv("resources.csv", ["Name", "Email", "Role", "Department", "Type", "Cost Rate", "Bill Rate", "Status"], rows);
+    exportToCsv("resources.csv", ["Name", "Email", "Role", "Department", "Type", "Cost", "Bill Rate", "Overhead (EUR)", "Status"], rows);
     toast.success("Exported resources to CSV");
   };
 

@@ -27,9 +27,13 @@ const signupSchema = z.object({
 export default function AuthPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const prefilledEmail = searchParams.get("email") || "";
+  const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
 
   // Redirect if already logged in
   if (user) {

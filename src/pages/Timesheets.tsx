@@ -245,6 +245,11 @@ export default function Timesheets() {
               </Button>
             )}
             {canEdit && (
+              <Button size="sm" variant="outline" onClick={() => setShowMonthly(true)}>
+                <CalendarDays className="h-4 w-4 mr-1" /> Log Month
+              </Button>
+            )}
+            {canEdit && (
               <Button size="sm" onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Log Time
               </Button>

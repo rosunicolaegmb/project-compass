@@ -161,6 +161,10 @@ export default function Timesheets() {
     });
   }, [timeEntries, search, filterResource, filterProject, filterPhase, filterStatus]);
 
+  useEffect(() => {
+    saveFilters("timesheets", { search, resource: filterResource, project: filterProject, phase: filterPhase, status: filterStatus });
+  }, [search, filterResource, filterProject, filterPhase, filterStatus]);
+
   const hasFilters = filterResource !== "all" || filterProject !== "all" || filterPhase !== "all" || filterStatus !== "all";
 
   const clearFilters = () => {

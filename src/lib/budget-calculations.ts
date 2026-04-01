@@ -102,6 +102,22 @@ function worstHealth(...statuses: HealthStatus[]): HealthStatus {
   return "green";
 }
 
+/**
+ * Resolve the effective rate using the hierarchy:
+ *   1. Member override (project_members.bill_rate_override / cost_rate_override)
+ *   2. Project default (projects.default_bill_rate / default_cost_rate)
+ *   3. Resource default (resources.default_bill_rate / default_cost_rate)
+ */
+export function resolveRate(
+  memberOverride: number | null | undefined,
+  projectDefault: number | null | undefined,
+  resourceDefault: number | null | undefined,
+): number {
+  if (memberOverride != null && memberOverride > 0) return memberOverride;
+  if (projectDefault != null && projectDefault > 0) return projectDefault;
+  return resourceDefault ?? 0;
+}
+
 // ---------- main ----------
 export function calculateBudgetMetrics(input: BudgetInputs): BudgetMetrics {
   const {

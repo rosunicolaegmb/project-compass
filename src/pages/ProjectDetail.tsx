@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditModule } from "@/lib/auth-helpers";
 import { cn } from "@/lib/utils";
 import { calculateBudgetMetrics, type HealthStatus } from "@/lib/budget-calculations";
+import { loadConversionRates, fmtEur } from "@/lib/currency";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
@@ -37,7 +38,7 @@ const phaseStatusMap: Record<string, any> = {
   planned: "draft", active: "active", completed: "completed", on_hold: "on-hold",
 };
 
-function fmt(n: number | null | undefined, prefix = "$"): string {
+function fmt(n: number | null | undefined, prefix = "€"): string {
   if (n == null) return "—";
   return `${prefix}${Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
@@ -53,6 +54,7 @@ function fmtHrs(n: number | null | undefined): string {
 }
 
 export default function ProjectDetail() {
+  useEffect(() => { loadConversionRates(); }, []);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { roles } = useAuth();

@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import {
   startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse,
 } from "date-fns";
@@ -34,6 +36,7 @@ const schema = z.object({
   description: z.string().max(500).optional(),
   bill_rate: z.coerce.number().min(0).optional(),
   cost_rate: z.coerce.number().min(0).optional(),
+  currency: z.string().default("EUR"),
   skip_weekends: z.boolean().default(true),
   skip_existing: z.boolean().default(true),
 });
@@ -57,7 +60,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       resource_id: "", project_id: "", phase_id: "",
       month: format(new Date(), "yyyy-MM"),
       hours: 8, is_billable: true, description: "",
-      bill_rate: 0, cost_rate: 0, skip_weekends: true, skip_existing: true,
+      bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
     },
   });
 
@@ -67,7 +70,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         resource_id: "", project_id: "", phase_id: "",
         month: format(new Date(), "yyyy-MM"),
         hours: 8, is_billable: true, description: "",
-        bill_rate: 0, cost_rate: 0, skip_weekends: true, skip_existing: true,
+        bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
       });
     }
   }, [open, form]);
@@ -75,9 +78,10 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   const watchProjectId = form.watch("project_id");
   const watchMonth = form.watch("month");
   const watchSkipWeekends = form.watch("skip_weekends");
+  const watchCurrency = form.watch("currency");
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
+  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
 
-  // Calculate working days
   const workingDays = useMemo(() => {
     if (!watchMonth) return [];
     try {
@@ -96,7 +100,6 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
   const totalHours = workingDays.length * (form.watch("hours") || 0);
 
-  // Auto-fill rates when resource changes
   const watchResourceId = form.watch("resource_id");
   useEffect(() => {
     if (watchResourceId) {
@@ -104,6 +107,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       if (resource) {
         form.setValue("bill_rate", Number(resource.default_bill_rate || 0));
         form.setValue("cost_rate", Number(resource.default_cost_rate || 0));
+        form.setValue("currency", resource.currency || "EUR");
       }
     }
   }, [watchResourceId, resources, form]);
@@ -112,10 +116,8 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
     mutationFn: async (values: FormData) => {
       if (workingDays.length === 0) throw new Error("No days to log for this month.");
 
-      let skipCount = 0;
       const dates = workingDays.map(d => format(d, "yyyy-MM-dd"));
 
-      // Check for existing entries if skip_existing
       let existingDates = new Set<string>();
       if (values.skip_existing) {
         const { data: existing } = await supabase
@@ -132,13 +134,12 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       }
 
       const newDates = dates.filter(d => !existingDates.has(d));
-      skipCount = dates.length - newDates.length;
+      const skipCount = dates.length - newDates.length;
 
       if (newDates.length === 0) {
         throw new Error("All days already have time entries for this resource/project combination.");
       }
 
-      // Insert in batches of 50
       const batchSize = 50;
       for (let i = 0; i < newDates.length; i += batchSize) {
         const batch = newDates.slice(i, i + batchSize).map(date => ({
@@ -151,6 +152,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
           description: values.description || null,
           bill_rate: values.bill_rate || null,
           cost_rate: values.cost_rate || null,
+          currency: values.currency,
         }));
 
         const { error } = await supabase.from("time_entries").insert(batch);
@@ -244,17 +246,27 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
+            <FormField control={form.control} name="currency" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rate Currency</FormLabel>
+                <FormControl>
+                  <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="cost_rate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cost Rate ($/hr)</FormLabel>
+                  <FormLabel>Cost Rate ({sym}/hr)</FormLabel>
                   <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill Rate ($/hr)</FormLabel>
+                  <FormLabel>Bill Rate ({sym}/hr)</FormLabel>
                   <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -298,7 +310,6 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
-            {/* Summary */}
             <div className="rounded-md bg-muted p-3 space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Days to log</span>

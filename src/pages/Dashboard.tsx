@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { loadConversionRates, toEur, fmtEur, fmtEurFull } from "@/lib/currency";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,15 +18,8 @@ import {
 } from "recharts";
 
 // ── helpers ──
-function fmt(n: number | null | undefined): string {
-  if (n == null || isNaN(n)) return "—";
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-}
-function fmtFull(n: number): string {
-  return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-}
+const fmt = fmtEur;
+const fmtFull = fmtEurFull;
 function fmtPct(n: number): string { return `${n.toFixed(1)}%`; }
 
 const tooltipStyle = {
@@ -54,6 +48,9 @@ function getPeriodRange(period: Period): { from: string; to: string } {
 
 export default function Dashboard() {
   const [period, setPeriod] = useState<Period>("yearly");
+
+  // Load conversion rates
+  useEffect(() => { loadConversionRates(); }, []);
   // ── data queries ──
   const { data: projects = [] } = useQuery({
     queryKey: ["dash-projects"],
@@ -70,7 +67,7 @@ export default function Dashboard() {
     queryKey: ["dash-time"],
     queryFn: async () => {
       const { data, error } = await supabase.from("time_entries")
-        .select("hours, cost_rate, bill_rate, is_billable, project_id, entry_date, approval_status")
+        .select("hours, cost_rate, bill_rate, is_billable, project_id, entry_date, approval_status, currency")
         .is("deleted_at", null);
       if (error) throw error;
       return data;
@@ -81,7 +78,7 @@ export default function Dashboard() {
     queryKey: ["dash-expenses"],
     queryFn: async () => {
       const { data, error } = await supabase.from("expense_entries")
-        .select("amount, project_id, expense_date")
+        .select("amount, project_id, expense_date, currency")
         .is("deleted_at", null);
       if (error) throw error;
       return data;
@@ -122,13 +119,13 @@ export default function Dashboard() {
     const allProjectIds = new Set(projects.map((p: any) => p.id));
 
     // Budget totals
-    const totalPlannedBudget = projects.reduce((s: number, p: any) => s + Number(p.planned_budget || p.total_budget || 0), 0);
+    const totalPlannedBudget = projects.reduce((s: number, p: any) => s + toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString()), 0);
 
-    // Actuals
-    const totalActualCost = filteredTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0)
-      + filteredExpenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    // Actuals (convert to EUR)
+    const totalActualCost = filteredTime.reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date), 0)
+      + filteredExpenses.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
     const totalActualRevenue = filteredTime.filter((t: any) => t.is_billable)
-      .reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
+      .reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
 
     // Forecast
     const totalForecastCost = forecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_cost || 0) + Number(f.forecast_expenses || 0), 0) || totalActualCost;
@@ -141,9 +138,10 @@ export default function Dashboard() {
     const projectMetrics = projects.map((p: any) => {
       const pTime = filteredTime.filter((t: any) => t.project_id === p.id);
       const pExp = filteredExpenses.filter((e: any) => e.project_id === p.id);
-      const cost = pTime.reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.cost_rate || 0), 0) + pExp.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-      const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + Number(t.hours || 0) * Number(t.bill_rate || 0), 0);
-      const budget = Number(p.planned_budget || p.total_budget || 0);
+      const cost = pTime.reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date), 0)
+        + pExp.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
+      const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+      const budget = toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString());
       const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
       const budgetUsed = budget > 0 ? (cost / budget) * 100 : 0;
       const hasTime = pTime.length > 0;
@@ -178,14 +176,14 @@ export default function Dashboard() {
       const m = t.entry_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
-      monthMap[m].cost += Number(t.hours || 0) * Number(t.cost_rate || 0);
-      if (t.is_billable) monthMap[m].revenue += Number(t.hours || 0) * Number(t.bill_rate || 0);
+      monthMap[m].cost += toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date);
+      if (t.is_billable) monthMap[m].revenue += toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date);
     });
     filteredExpenses.forEach((e: any) => {
       const m = e.expense_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
-      monthMap[m].cost += Number(e.amount || 0);
+      monthMap[m].cost += toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date);
     });
     const monthlyTrends = Object.entries(monthMap)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -285,7 +283,7 @@ export default function Dashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `$${v / 1000}k`} />
+                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `€${v / 1000}k`} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [fmtFull(v)]} />
                   <Legend />
                   <Area type="monotone" dataKey="revenue" stroke="hsl(160, 60%, 40%)" fill="url(#gRev)" strokeWidth={2} name="Revenue" />

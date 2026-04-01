@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { loadConversionRates, toEur, fmtEur } from "@/lib/currency";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +16,7 @@ import {
   LineChart, Line, Legend, PieChart, Pie, Cell,
 } from "recharts";
 
-function fmt(n: number | null | undefined): string {
-  if (n == null) return "—";
-  return `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
+const fmt = fmtEur;
 function fmtPct(n: number): string { return `${n.toFixed(1)}%`; }
 
 const tooltipStyle = {
@@ -33,6 +31,7 @@ const CHART_COLORS = [
 ];
 
 export default function Reports() {
+  useEffect(() => { loadConversionRates(); }, []);
   // --- Filters ---
   const [filterClient, setFilterClient] = useState("all");
   const [filterPM, setFilterPM] = useState("all");
@@ -75,7 +74,7 @@ export default function Reports() {
     queryKey: ["rpt-time"],
     queryFn: async () => {
       const { data, error } = await supabase.from("time_entries")
-        .select("hours, cost_rate, bill_rate, is_billable, project_id, resource_id, phase_id, entry_date, approval_status")
+        .select("hours, cost_rate, bill_rate, is_billable, project_id, resource_id, phase_id, entry_date, approval_status, currency")
         .is("deleted_at", null);
       if (error) throw error;
       return data;
@@ -86,7 +85,7 @@ export default function Reports() {
     queryKey: ["rpt-expenses"],
     queryFn: async () => {
       const { data, error } = await supabase.from("expense_entries")
-        .select("amount, project_id, phase_id, expense_date, resource_id")
+        .select("amount, project_id, phase_id, expense_date, resource_id, currency")
         .is("deleted_at", null);
       if (error) throw error;
       return data;

@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -42,7 +44,7 @@ interface ProjectFormDialogProps {
 const EMPTY_FORM = {
   client_id: "", name: "", code: "", project_type: "time_and_materials" as const,
   status: "draft" as const, description: "", start_date: "", end_date: "",
-  total_budget: "", planned_budget: "", currency: "USD",
+  total_budget: "", planned_budget: "", currency: "EUR",
   pm_resource_id: "", revenue_model: "", notes: "",
   default_bill_rate: "", default_cost_rate: "",
 };
@@ -66,7 +68,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
         end_date: project.end_date || "",
         total_budget: project.total_budget != null ? String(project.total_budget) : "",
         planned_budget: project.planned_budget != null ? String(project.planned_budget) : "",
-        currency: project.currency || "USD",
+        currency: project.currency || "EUR",
         pm_resource_id: project.pm_resource_id || "",
         revenue_model: project.revenue_model || "",
         notes: project.notes || "",
@@ -133,6 +135,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
   };
 
   const update = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
+  const sym = CURRENCY_SYMBOLS[form.currency as Currency] || "€";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,7 +189,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
                   <SelectItem value="on_hold">On Hold</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
-                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                   <SelectItem value="sow_expired">SOW Expired</SelectItem>
                 </SelectContent>
               </Select>
@@ -207,7 +210,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
             </div>
             <div className="space-y-1.5">
               <Label>Currency</Label>
-              <Input value={form.currency} onChange={(e) => update("currency", e.target.value)} />
+              <CurrencySelect value={form.currency} onValueChange={(v) => update("currency", v)} className="w-full" />
             </div>
             <div className="space-y-1.5">
               <Label>Revenue Model</Label>
@@ -230,11 +233,11 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
           {/* Row 5: Budgets */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Total Contract Value</Label>
+              <Label>Total Contract Value ({sym})</Label>
               <Input type="number" step="0.01" value={form.total_budget} onChange={(e) => update("total_budget", e.target.value)} placeholder="0.00" />
             </div>
             <div className="space-y-1.5">
-              <Label>Planned Budget</Label>
+              <Label>Planned Budget ({sym})</Label>
               <Input type="number" step="0.01" value={form.planned_budget} onChange={(e) => update("planned_budget", e.target.value)} placeholder="0.00" />
             </div>
           </div>
@@ -242,12 +245,12 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
           {/* Row 6: Default Rates */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Default Bill Rate ($/hr)</Label>
+              <Label>Default Bill Rate ({sym}/hr)</Label>
               <Input type="number" step="0.01" value={form.default_bill_rate} onChange={(e) => update("default_bill_rate", e.target.value)} placeholder="Inherit from resource" />
               <p className="text-xs text-muted-foreground">Applies to all members unless individually overridden</p>
             </div>
             <div className="space-y-1.5">
-              <Label>Default Cost Rate ($/hr)</Label>
+              <Label>Default Cost Rate ({sym}/hr)</Label>
               <Input type="number" step="0.01" value={form.default_cost_rate} onChange={(e) => update("default_cost_rate", e.target.value)} placeholder="Inherit from resource" />
               <p className="text-xs text-muted-foreground">Rate hierarchy: Member → Project → Resource</p>
             </div>

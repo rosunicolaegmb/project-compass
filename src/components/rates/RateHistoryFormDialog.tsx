@@ -17,12 +17,15 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 
 const schema = z.object({
   resource_id: z.string().min(1, "Resource is required"),
   delivery_role_id: z.string().optional(),
   cost_rate: z.coerce.number().min(0, "Cost rate must be positive"),
   bill_rate: z.coerce.number().min(0, "Bill rate must be positive"),
+  currency: z.string().default("EUR"),
   effective_from: z.string().min(1, "Effective from date is required"),
   effective_to: z.string().optional(),
   reason: z.string().optional(),
@@ -46,9 +49,12 @@ export function RateHistoryFormDialog({ open, onOpenChange, rateEntry, resources
     resolver: zodResolver(schema),
     defaultValues: {
       resource_id: "", delivery_role_id: "", cost_rate: 0, bill_rate: 0,
-      effective_from: "", effective_to: "", reason: "",
+      currency: "EUR", effective_from: "", effective_to: "", reason: "",
     },
   });
+
+  const watchCurrency = form.watch("currency");
+  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
 
   useEffect(() => {
     if (rateEntry) {
@@ -57,6 +63,7 @@ export function RateHistoryFormDialog({ open, onOpenChange, rateEntry, resources
         delivery_role_id: rateEntry.delivery_role_id || "",
         cost_rate: Number(rateEntry.cost_rate || 0),
         bill_rate: Number(rateEntry.bill_rate || 0),
+        currency: rateEntry.currency || "EUR",
         effective_from: rateEntry.effective_from || "",
         effective_to: rateEntry.effective_to || "",
         reason: rateEntry.reason || "",
@@ -64,10 +71,21 @@ export function RateHistoryFormDialog({ open, onOpenChange, rateEntry, resources
     } else {
       form.reset({
         resource_id: "", delivery_role_id: "", cost_rate: 0, bill_rate: 0,
-        effective_from: new Date().toISOString().split("T")[0], effective_to: "", reason: "",
+        currency: "EUR", effective_from: new Date().toISOString().split("T")[0], effective_to: "", reason: "",
       });
     }
   }, [rateEntry, form, open]);
+
+  // Auto-fill currency from resource
+  const watchResourceId = form.watch("resource_id");
+  useEffect(() => {
+    if (watchResourceId && !isEditing) {
+      const resource = resources.find((r: any) => r.id === watchResourceId);
+      if (resource) {
+        form.setValue("currency", resource.currency || "EUR");
+      }
+    }
+  }, [watchResourceId, resources, form, isEditing]);
 
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
@@ -76,6 +94,7 @@ export function RateHistoryFormDialog({ open, onOpenChange, rateEntry, resources
         delivery_role_id: values.delivery_role_id || null,
         cost_rate: values.cost_rate,
         bill_rate: values.bill_rate,
+        currency: values.currency,
         effective_from: values.effective_from,
         effective_to: values.effective_to || null,
         reason: values.reason || null,
@@ -133,17 +152,26 @@ export function RateHistoryFormDialog({ open, onOpenChange, rateEntry, resources
                 <FormMessage />
               </FormItem>
             )} />
+            <FormField control={form.control} name="currency" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Rate Currency</FormLabel>
+                <FormControl>
+                  <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="cost_rate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cost Rate ($/hr) *</FormLabel>
+                  <FormLabel>Cost Rate ({sym}/hr) *</FormLabel>
                   <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill Rate ($/hr) *</FormLabel>
+                  <FormLabel>Bill Rate ({sym}/hr) *</FormLabel>
                   <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>

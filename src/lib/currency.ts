@@ -7,12 +7,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export const CURRENCIES = ["EUR", "GBP"] as const;
+export const CURRENCIES = ["EUR", "GBP", "RON"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   EUR: "€",
   GBP: "£",
+  RON: "lei",
 };
 
 /** Cache for conversion rates: key = "YYYY-M" */
@@ -26,8 +27,7 @@ let rateCacheLoaded = false;
 export async function loadConversionRates(): Promise<Record<string, number>> {
   const { data, error } = await supabase
     .from("currency_conversion_rates")
-    .select("year, month, rate")
-    .eq("from_currency", "GBP")
+    .select("year, month, rate, from_currency")
     .eq("to_currency", "EUR");
 
   if (error) {
@@ -37,7 +37,7 @@ export async function loadConversionRates(): Promise<Record<string, number>> {
 
   rateCache = {};
   data?.forEach((r) => {
-    rateCache[`${r.year}-${r.month}`] = Number(r.rate);
+    rateCache[`${r.from_currency}-${r.year}-${r.month}`] = Number(r.rate);
   });
   rateCacheLoaded = true;
   return rateCache;
@@ -47,10 +47,19 @@ export async function loadConversionRates(): Promise<Record<string, number>> {
  * Get the GBP→EUR rate for a specific month.
  * Falls back to 1.15 if not found.
  */
-export function getGbpToEurRate(date: string | Date): number {
+export function getToEurRate(currency: string, date: string | Date): number {
   const d = typeof date === "string" ? new Date(date) : date;
-  const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-  return rateCache[key] ?? 1.15;
+  const key = `${currency}-${d.getFullYear()}-${d.getMonth() + 1}`;
+  if (rateCache[key] != null) return rateCache[key];
+  // fallback defaults
+  if (currency === "GBP") return 1.15;
+  if (currency === "RON") return 0.20;
+  return 1;
+}
+
+/** @deprecated use getToEurRate */
+export function getGbpToEurRate(date: string | Date): number {
+  return getToEurRate("GBP", date);
 }
 
 /**
@@ -65,8 +74,8 @@ export function toEur(
 ): number {
   if (!amount) return 0;
   if (currency === "EUR") return amount;
-  if (currency === "GBP") {
-    return amount * getGbpToEurRate(entryDate);
+  if (currency === "GBP" || currency === "RON") {
+    return amount * getToEurRate(currency, entryDate);
   }
   // Unknown currency — treat as EUR (legacy fallback)
   return amount;

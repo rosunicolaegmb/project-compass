@@ -187,41 +187,43 @@ export default function Timesheets() {
   };
 
   // Cost calculation helper: groups by resource_id + month
-  const costMap = useMemo(() => {
-    const map = new Map<string, { baseCost: number; overhead: number; monthlyCost: number; totalHours: number }>();
-    // Group entries by resource + month
-    const groups: Record<string, { resource: any; totalHours: number }> = {};
-    filtered.forEach((t: any) => {
-      const month = t.entry_date?.substring(0, 7) || "";
-      const key = `${t.resource_id}-${month}`;
-      if (!groups[key]) {
-        groups[key] = { resource: t.resources, totalHours: 0 };
-      }
-      groups[key].totalHours += Number(t.hours || 0);
-    });
-    Object.entries(groups).forEach(([key, { resource, totalHours }]) => {
-      const empType = resource?.employment_type;
+  // Per-entry cost calculation helper
+  // Full-time: monthly_cost + overhead (same for all entries in that resource/month)
+  // Contractor: (default_cost_rate × entry hours_per_day) + overhead (per entry)
+  const getEntryCost = (entry: any) => {
+    const resource = entry.resources;
+    const empType = resource?.employment_type;
+    const overhead = Number(resource?.overhead_cost_eur ?? 0);
+    if (empType === "full_time" || empType === "part_time") {
       const monthlyCostVal = Number(resource?.monthly_cost ?? 0);
-      const overhead = Number(resource?.overhead_cost_eur ?? 0);
+      return monthlyCostVal + overhead;
+    } else {
       const costRate = Number(resource?.default_cost_rate ?? 0);
-      let baseCost: number;
-      if (empType === "full_time" || empType === "part_time") {
-        baseCost = monthlyCostVal;
-      } else {
-        baseCost = costRate * totalHours;
-      }
-      map.set(key, { baseCost, overhead, monthlyCost: baseCost + overhead, totalHours });
-    });
-    return map;
-  }, [filtered]);
+      const hoursPerDay = Number(entry.hours || 0);
+      return (costRate * hoursPerDay) + overhead;
+    }
+  };
 
   // Summary stats
   const totalHours = filtered.reduce((s: number, t: any) => s + Number(t.hours || 0), 0);
+  // For full-time, deduplicate by resource/month so overhead+monthly_cost is counted once
   const totalCost = useMemo(() => {
     let sum = 0;
-    costMap.forEach((v) => { sum += v.monthlyCost; });
+    const seenFullTime = new Set<string>();
+    filtered.forEach((t: any) => {
+      const empType = (t.resources as any)?.employment_type;
+      if (empType === "full_time" || empType === "part_time") {
+        const key = `${t.resource_id}-${t.entry_date?.substring(0, 7)}`;
+        if (!seenFullTime.has(key)) {
+          seenFullTime.add(key);
+          sum += getEntryCost(t);
+        }
+      } else {
+        sum += getEntryCost(t);
+      }
+    });
     return sum;
-  }, [costMap]);
+  }, [filtered]);
   const totalRevenue = filtered.reduce((s: number, t: any) => s + (t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0), 0);
   const billableHours = filtered.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + Number(t.hours || 0), 0);
 
@@ -280,7 +282,7 @@ export default function Timesheets() {
                 const rows = filtered.map((t: any) => [
                   t.entry_date, (t.resources as any)?.display_name || "", (t.projects as any)?.name || "",
                   (t.project_phases as any)?.name || "", t.hours, t.is_billable ? "Yes" : "No",
-                  costMap.get(`${t.resource_id}-${t.entry_date?.substring(0, 7)}`)?.monthlyCost ?? 0,
+                  getEntryCost(t),
                   t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0,
                   t.approval_status,
                 ]);
@@ -438,9 +440,9 @@ export default function Timesheets() {
                   </TableRow>
                 ) : (
                   filtered.map((t: any) => {
-                    const monthKey = `${t.resource_id}-${t.entry_date?.substring(0, 7)}`;
-                    const costData = costMap.get(monthKey);
-                    const monthlyCost = costData?.monthlyCost ?? 0;
+                    const entryCost = getEntryCost(t);
+                    const empType = (t.resources as any)?.employment_type;
+                    const isMonthly = empType === "full_time" || empType === "part_time";
                     const rev = t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0;
                     return (
                       <TableRow key={t.id} className="border-border hover:bg-muted/50">
@@ -455,8 +457,8 @@ export default function Timesheets() {
                         <TableCell className="text-muted-foreground">{(t.project_phases as any)?.name || "—"}</TableCell>
                         <TableCell className="text-right font-medium">{t.hours}</TableCell>
                         <TableCell className="text-right">
-                          <span title="Monthly total: base cost + overhead">{fmt(monthlyCost)}</span>
-                          <span className="block text-[10px] text-muted-foreground">monthly</span>
+                          <span title={isMonthly ? "Monthly: base + overhead" : `Daily: rate × ${t.hours}h + overhead`}>{fmt(entryCost)}</span>
+                          <span className="block text-[10px] text-muted-foreground">{isMonthly ? "monthly" : "daily"}</span>
                         </TableCell>
                         <TableCell className="text-right">{fmt(rev)}</TableCell>
                         <TableCell>

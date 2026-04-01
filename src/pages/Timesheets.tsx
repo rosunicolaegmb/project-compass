@@ -188,25 +188,23 @@ export default function Timesheets() {
 
   // Cost calculation helper: groups by resource_id + month
   // Per-entry cost calculation helper
-  // Full-time: monthly_cost + overhead (same for all entries in that resource/month)
-  // Contractor: (default_cost_rate × entry hours_per_day) + overhead (per entry)
+  // Full-time: monthly_cost (same for all entries in that resource/month)
+  // Contractor: default_cost_rate × entry hours_per_day
   const getEntryCost = (entry: any) => {
     const resource = entry.resources;
     const empType = resource?.employment_type;
-    const overhead = Number(resource?.overhead_cost_eur ?? 0);
     if (empType === "full_time" || empType === "part_time") {
-      const monthlyCostVal = Number(resource?.monthly_cost ?? 0);
-      return monthlyCostVal + overhead;
+      return Number(resource?.monthly_cost ?? 0);
     } else {
       const costRate = Number(resource?.default_cost_rate ?? 0);
       const hoursPerDay = Number(entry.hours || 0);
-      return (costRate * hoursPerDay) + overhead;
+      return costRate * hoursPerDay;
     }
   };
 
   // Summary stats
   const totalHours = filtered.reduce((s: number, t: any) => s + Number(t.hours || 0), 0);
-  // For full-time, deduplicate by resource/month so overhead+monthly_cost is counted once
+  // For full-time, deduplicate by resource/month so monthly_cost is counted once
   const totalCost = useMemo(() => {
     let sum = 0;
     const seenFullTime = new Set<string>();
@@ -457,7 +455,7 @@ export default function Timesheets() {
                         <TableCell className="text-muted-foreground">{(t.project_phases as any)?.name || "—"}</TableCell>
                         <TableCell className="text-right font-medium">{t.hours}</TableCell>
                         <TableCell className="text-right">
-                          <span title={isMonthly ? "Monthly: base + overhead" : `Daily: rate × ${t.hours}h + overhead`}>{fmt(entryCost)}</span>
+                          <span title={isMonthly ? "Monthly cost" : `Daily: rate × ${t.hours}h`}>{fmt(entryCost)}</span>
                           <span className="block text-[10px] text-muted-foreground">{isMonthly ? "monthly" : "daily"}</span>
                         </TableCell>
                         <TableCell className="text-right">{fmt(rev)}</TableCell>

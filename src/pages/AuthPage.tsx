@@ -33,6 +33,7 @@ export default function AuthPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const prefilledEmail = searchParams.get("email") || "";
+  const prefilledName = searchParams.get("name") || "";
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
 
   // Redirect if already logged in

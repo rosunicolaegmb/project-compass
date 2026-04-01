@@ -376,9 +376,13 @@ export default function Timesheets() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={canBulkEdit ? 12 : (canEdit ? 11 : 10)} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableSkeleton columns={canBulkEdit ? 12 : (canEdit ? 11 : 10)} rows={8} />
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={canBulkEdit ? 12 : (canEdit ? 11 : 10)} className="text-center py-8 text-muted-foreground">No time entries found.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={canBulkEdit ? 12 : (canEdit ? 11 : 10)}>
+                      <EmptyState icon={Clock} title="No time entries found" description="Log your first time entry or adjust filters to see data." />
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filtered.map((t: any) => {
                     const cost = Number(t.hours || 0) * Number(t.cost_rate || 0);

@@ -68,19 +68,22 @@ export default function Resources() {
   });
 
   const fmtRate = (n: number | null | undefined) => n != null ? `$${Number(n).toLocaleString()}/hr` : "—";
+  const fmtMonthly = (n: number | null | undefined, currency = "$") => n != null ? `${currency}${Number(n).toLocaleString()}/mo` : "—";
 
   const handleExport = () => {
     const rows = filtered.map((r: any) => [
       r.display_name, r.email || "", (r.delivery_roles as any)?.name || "",
       r.department || "", EMPLOYMENT_LABELS[r.employment_type] || "",
-      r.default_cost_rate || "", r.default_bill_rate || "",
+      r.employment_type === "full_time" ? (r.monthly_cost || "") : (r.default_cost_rate || ""),
+      r.default_bill_rate || "",
+      r.overhead_cost_eur || "",
       r.is_active ? "Active" : "Inactive",
     ]);
-    exportToCsv("resources.csv", ["Name", "Email", "Role", "Department", "Type", "Cost Rate", "Bill Rate", "Status"], rows);
+    exportToCsv("resources.csv", ["Name", "Email", "Role", "Department", "Type", "Cost", "Bill Rate", "Overhead (EUR)", "Status"], rows);
     toast.success("Exported resources to CSV");
   };
 
-  const colCount = canEdit ? 9 : 8;
+  const colCount = canEdit ? 10 : 9;
 
   return (
     <div className="page-container">
@@ -119,8 +122,9 @@ export default function Resources() {
               <TableHead>Role</TableHead>
               <TableHead className="hidden lg:table-cell">Department</TableHead>
               <TableHead className="hidden sm:table-cell">Type</TableHead>
-              <TableHead className="text-right">Cost Rate</TableHead>
+              <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">Bill Rate</TableHead>
+              <TableHead className="text-right hidden lg:table-cell">Overhead (€)</TableHead>
               <TableHead>Status</TableHead>
               {canEdit && <TableHead className="w-20">Actions</TableHead>}
             </TableRow>
@@ -155,8 +159,11 @@ export default function Resources() {
                       {EMPLOYMENT_LABELS[r.employment_type] || r.employment_type || "—"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtRate(r.default_cost_rate)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {r.employment_type === "full_time" ? fmtMonthly(r.monthly_cost) : fmtRate(r.default_cost_rate)}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtRate(r.default_bill_rate)}</TableCell>
+                  <TableCell className="text-right tabular-nums hidden lg:table-cell">{fmtMonthly(r.overhead_cost_eur, "€")}</TableCell>
                   <TableCell><StatusBadge status={r.is_active ? "active" : "archived"} /></TableCell>
                   {canEdit && (
                     <TableCell>

@@ -29,6 +29,8 @@ const schema = z.object({
   delivery_role_id: z.string().optional(),
   default_bill_rate: z.coerce.number().min(0).optional(),
   default_cost_rate: z.coerce.number().min(0).optional(),
+  monthly_cost: z.coerce.number().min(0).optional(),
+  overhead_cost_eur: z.coerce.number().min(0).optional(),
   hire_date: z.string().optional(),
   is_active: z.boolean().default(true),
 });
@@ -51,7 +53,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
     defaultValues: {
       display_name: "", email: "", job_title: "", department: "", employee_id: "",
       employment_type: "full_time", delivery_role_id: "", default_bill_rate: 0,
-      default_cost_rate: 0, hire_date: "", is_active: true,
+      default_cost_rate: 0, monthly_cost: 0, overhead_cost_eur: 0, hire_date: "", is_active: true,
     },
   });
 
@@ -67,6 +69,8 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         delivery_role_id: resource.delivery_role_id || "",
         default_bill_rate: Number(resource.default_bill_rate || 0),
         default_cost_rate: Number(resource.default_cost_rate || 0),
+        monthly_cost: Number(resource.monthly_cost || 0),
+        overhead_cost_eur: Number(resource.overhead_cost_eur || 0),
         hire_date: resource.hire_date || "",
         is_active: resource.is_active ?? true,
       });
@@ -74,7 +78,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
       form.reset({
         display_name: "", email: "", job_title: "", department: "", employee_id: "",
         employment_type: "full_time", delivery_role_id: "", default_bill_rate: 0,
-        default_cost_rate: 0, hire_date: "", is_active: true,
+        default_cost_rate: 0, monthly_cost: 0, overhead_cost_eur: 0, hire_date: "", is_active: true,
       });
     }
   }, [resource, form, open]);
@@ -91,6 +95,8 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         delivery_role_id: values.delivery_role_id || null,
         default_bill_rate: values.default_bill_rate || null,
         default_cost_rate: values.default_cost_rate || null,
+        monthly_cost: values.monthly_cost || null,
+        overhead_cost_eur: values.overhead_cost_eur || null,
         hire_date: values.hire_date || null,
         is_active: values.is_active,
       };
@@ -114,6 +120,9 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
   const EMPLOYMENT_LABELS: Record<string, string> = {
     full_time: "Full Time", part_time: "Part Time", contractor: "Contractor", vendor: "Vendor",
   };
+
+  const employmentType = form.watch("employment_type");
+  const isFullTime = employmentType === "full_time";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -192,22 +201,48 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                 </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="default_cost_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Cost Rate ($/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Bill Rate ($/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
+            {isFullTime ? (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="monthly_cost" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Monthly Cost ($/mo)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Bill Rate ($/hr)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="default_cost_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Cost Rate ($/hr)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="default_bill_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Bill Rate ($/hr)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            )}
+            <FormField control={form.control} name="overhead_cost_eur" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Monthly Overhead (€/mo)</FormLabel>
+                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <FormField control={form.control} name="hire_date" render={({ field }) => (
               <FormItem>
                 <FormLabel>Hire Date</FormLabel>

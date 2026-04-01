@@ -776,6 +776,8 @@ export type Database = {
           id: string
           is_active: boolean
           job_title: string | null
+          monthly_cost: number | null
+          overhead_cost_eur: number | null
           updated_at: string
           user_id: string | null
         }
@@ -796,6 +798,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           job_title?: string | null
+          monthly_cost?: number | null
+          overhead_cost_eur?: number | null
           updated_at?: string
           user_id?: string | null
         }
@@ -816,6 +820,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           job_title?: string | null
+          monthly_cost?: number | null
+          overhead_cost_eur?: number | null
           updated_at?: string
           user_id?: string | null
         }

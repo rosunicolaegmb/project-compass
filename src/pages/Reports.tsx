@@ -16,10 +16,7 @@ import {
   LineChart, Line, Legend, PieChart, Pie, Cell,
 } from "recharts";
 
-function fmt(n: number | null | undefined): string {
-  if (n == null) return "—";
-  return `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
+const fmt = fmtEur;
 function fmtPct(n: number): string { return `${n.toFixed(1)}%`; }
 
 const tooltipStyle = {

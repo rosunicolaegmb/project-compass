@@ -40,7 +40,7 @@ function fmt(n: number | null | undefined) {
 }
 
 export default function Timesheets() {
-  const { roles, isAdmin, isOfficeAdmin } = useAuth();
+  const { roles, isAdmin, isOfficeAdmin, isReporter, user } = useAuth();
   const canEdit = canEditModule(roles, "timesheets");
   const canBulkEdit = isAdmin || isOfficeAdmin;
   const queryClient = useQueryClient();

@@ -7,12 +7,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export const CURRENCIES = ["EUR", "GBP"] as const;
+export const CURRENCIES = ["EUR", "GBP", "RON"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   EUR: "€",
   GBP: "£",
+  RON: "lei",
 };
 
 /** Cache for conversion rates: key = "YYYY-M" */

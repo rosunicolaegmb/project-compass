@@ -42,6 +42,7 @@ const analysisNav: NavItem[] = [
 
 const systemNav: NavItem[] = [
   { title: "Settings", url: "/settings", icon: Settings, module: "settings" },
+  { title: "Configure", url: "/configure", icon: Wrench, module: "configure" },
 ];
 
 export function AppSidebar() {

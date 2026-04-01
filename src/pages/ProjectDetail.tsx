@@ -301,34 +301,65 @@ export default function ProjectDetail() {
         </span>
       </div>
 
-      {/* Financial KPI Cards */}
+      {/* Financial KPI Cards — differentiated by project type */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <StatCard title="Budget" value={fmt(revisedBudget)} icon={DollarSign} iconColor="bg-primary/10" />
-        <StatCard title="Actual Cost" value={fmt(actualCost)} icon={DollarSign} iconColor="bg-primary/10"
-          change={fmtPct(budgetConsumed) + " consumed"} changeType={budgetConsumed > 90 ? "negative" : "neutral"} />
-        <StatCard title="Remaining" value={fmt(remainingBudget)} icon={DollarSign} iconColor="bg-success/10"
-          changeType={remainingBudget < 0 ? "negative" : "positive"} />
-        <StatCard title="Actual Revenue" value={fmt(actualRevenue)} icon={TrendingUp} iconColor="bg-primary/10" />
-        <StatCard title="Gross Margin" value={fmtPct(grossMargin)} icon={BarChart3} iconColor="bg-primary/10"
-          changeType={grossMargin < 15 ? "negative" : "positive"} />
-        <StatCard title="Burn Rate" value={fmtPct(burnRate)} icon={Clock} iconColor="bg-warning/10"
-          change={fmtHrs(actualHours) + " logged"} changeType={burnRate > 100 ? "negative" : "neutral"} />
-        <StatCard title="EAC" value={fmt(estimateAtCompletion)} icon={TrendingUp} iconColor="bg-primary/10"
-          change={`CTC: ${fmt(costToComplete)}`} changeType={estimateAtCompletion > revisedBudget ? "negative" : "positive"} />
+        <StatCard title="Budget" value={fmt(metrics.revisedBudget)} icon={DollarSign} iconColor="bg-primary/10" />
+        <StatCard title="Actual Cost" value={fmt(metrics.actualCost)} icon={DollarSign} iconColor="bg-primary/10"
+          change={fmtPct(metrics.budgetConsumedPct) + " consumed"} changeType={metrics.budgetConsumedPct > 90 ? "negative" : "neutral"} />
+        <StatCard title="Remaining" value={fmt(metrics.remainingBudget)} icon={DollarSign} iconColor="bg-success/10"
+          changeType={metrics.remainingBudget < 0 ? "negative" : "positive"} />
+        <StatCard title={isT_M ? "T&M Revenue" : "Contract Value"} value={fmt(metrics.actualRevenue)} icon={TrendingUp} iconColor="bg-primary/10" />
+        <StatCard title="Gross Margin" value={fmtPct(metrics.grossMargin)} icon={BarChart3} iconColor="bg-primary/10"
+          changeType={metrics.grossMargin < 15 ? "negative" : "positive"} />
+        <StatCard title="Burn Rate" value={fmtPct(metrics.burnRatePct)} icon={Clock} iconColor="bg-warning/10"
+          change={fmtHrs(metrics.totalHours) + " logged"} changeType={metrics.burnRatePct > 100 ? "negative" : "neutral"} />
+        <StatCard title="EAC" value={fmt(metrics.estimateAtCompletion)} icon={TrendingUp} iconColor="bg-primary/10"
+          change={`CTC: ${fmt(metrics.costToComplete)}`} changeType={metrics.estimateAtCompletion > metrics.revisedBudget ? "negative" : "positive"} />
       </div>
 
-      {/* Health Indicators */}
+      {/* T&M-specific metrics */}
+      {isT_M && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="Blended Bill Rate" value={fmt(metrics.blendedBillRate)} icon={DollarSign} iconColor="bg-primary/10" change="/hr" changeType="neutral" />
+          <StatCard title="Blended Cost Rate" value={fmt(metrics.blendedCostRate)} icon={DollarSign} iconColor="bg-primary/10" change="/hr" changeType="neutral" />
+          <StatCard title="Billable Realization" value={fmtPct(metrics.billableRealization)} icon={Percent} iconColor="bg-primary/10"
+            change={`${metrics.billableHours.toLocaleString()} / ${metrics.totalHours.toLocaleString()} hrs`} changeType={metrics.billableRealization < 70 ? "negative" : "positive"} />
+          <StatCard title="Approved Billable Hrs" value={fmtHrs(metrics.approvedBillableHours)} icon={Target} iconColor="bg-success/10" />
+        </div>
+      )}
+
+      {/* FP-specific metrics */}
+      {!isT_M && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="Contract Value" value={fmt(Number(project.total_budget || 0))} icon={Target} iconColor="bg-primary/10" />
+          <StatCard title="Profitability" value={fmt(metrics.actualRevenue - metrics.actualCost)} icon={TrendingUp} iconColor="bg-success/10"
+            changeType={metrics.actualRevenue - metrics.actualCost < 0 ? "negative" : "positive"} />
+          <StatCard title="Cost to Complete" value={fmt(metrics.costToComplete)} icon={DollarSign} iconColor="bg-warning/10" />
+          <StatCard title="Margin at Completion" value={fmtPct(metrics.marginAtCompletion)} icon={BarChart3} iconColor="bg-primary/10"
+            changeType={metrics.marginAtCompletion < 15 ? "negative" : "positive"} />
+        </div>
+      )}
+
+      {/* Health Indicators with overall status */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Health Indicators</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Health Indicators</CardTitle>
+            <Badge variant="outline" className={cn(
+              "text-xs font-medium capitalize",
+              metrics.overallHealth === "green" && "bg-success/10 text-success border-success/20",
+              metrics.overallHealth === "amber" && "bg-warning/10 text-warning border-warning/20",
+              metrics.overallHealth === "red" && "bg-destructive/10 text-destructive border-destructive/20",
+            )}>
+              {metrics.overallHealth === "green" ? "Healthy" : metrics.overallHealth === "amber" ? "At Risk" : "Critical"}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {healthItems.map((h) => (
               <div key={h.label} className="flex items-center gap-3">
-                {h.status === "good" && <CheckCircle2 className="h-5 w-5 text-success shrink-0" />}
-                {h.status === "warning" && <AlertTriangle className="h-5 w-5 text-warning shrink-0" />}
-                {h.status === "critical" && <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />}
+                {healthIcon(h.status)}
                 <div>
                   <p className="text-sm font-medium">{h.label}</p>
                   <p className="text-xs text-muted-foreground">{h.detail}</p>

@@ -83,7 +83,7 @@ export default function Resources() {
     toast.success("Exported resources to CSV");
   };
 
-  const colCount = canEdit ? 9 : 8;
+  const colCount = canEdit ? 10 : 9;
 
   return (
     <div className="page-container">

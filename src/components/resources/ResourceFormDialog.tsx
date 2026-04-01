@@ -95,6 +95,8 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
         delivery_role_id: values.delivery_role_id || null,
         default_bill_rate: values.default_bill_rate || null,
         default_cost_rate: values.default_cost_rate || null,
+        monthly_cost: values.monthly_cost || null,
+        overhead_cost_eur: values.overhead_cost_eur || null,
         hire_date: values.hire_date || null,
         is_active: values.is_active,
       };

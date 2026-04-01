@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditModule } from "@/lib/auth-helpers";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TimeEntryFormDialog } from "@/components/timesheets/TimeEntryFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { saveFilters, loadFilters } from "@/lib/filters";
+import { exportToCsv } from "@/lib/csv-export";
+import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download } from "lucide-react";
 import { toast } from "sonner";
 import {
   startOfWeek, endOfWeek, addWeeks, subWeeks, format, parseISO,
@@ -41,11 +45,12 @@ export default function Timesheets() {
   const queryClient = useQueryClient();
 
   const [view, setView] = useState<"daily" | "weekly">("daily");
-  const [search, setSearch] = useState("");
-  const [filterResource, setFilterResource] = useState("all");
-  const [filterProject, setFilterProject] = useState("all");
-  const [filterPhase, setFilterPhase] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const saved = loadFilters("timesheets");
+  const [search, setSearch] = useState(saved.search || "");
+  const [filterResource, setFilterResource] = useState(saved.resource || "all");
+  const [filterProject, setFilterProject] = useState(saved.project || "all");
+  const [filterPhase, setFilterPhase] = useState(saved.phase || "all");
+  const [filterStatus, setFilterStatus] = useState(saved.status || "all");
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -156,6 +161,10 @@ export default function Timesheets() {
     });
   }, [timeEntries, search, filterResource, filterProject, filterPhase, filterStatus]);
 
+  useEffect(() => {
+    saveFilters("timesheets", { search, resource: filterResource, project: filterProject, phase: filterPhase, status: filterStatus });
+  }, [search, filterResource, filterProject, filterPhase, filterStatus]);
+
   const hasFilters = filterResource !== "all" || filterProject !== "all" || filterPhase !== "all" || filterStatus !== "all";
 
   const clearFilters = () => {
@@ -216,11 +225,30 @@ export default function Timesheets() {
       <PageHeader
         title="Timesheets"
         description="Track and approve time entries"
-        actions={canEdit ? (
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Log Time
-          </Button>
-        ) : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => {
+                const rows = filtered.map((t: any) => [
+                  t.entry_date, (t.resources as any)?.display_name || "", (t.projects as any)?.name || "",
+                  (t.project_phases as any)?.name || "", t.hours, t.is_billable ? "Yes" : "No",
+                  Number(t.hours || 0) * Number(t.cost_rate || 0),
+                  t.is_billable ? Number(t.hours || 0) * Number(t.bill_rate || 0) : 0,
+                  t.approval_status,
+                ]);
+                exportToCsv("timesheets.csv", ["Date", "Resource", "Project", "Phase", "Hours", "Billable", "Cost", "Revenue", "Status"], rows);
+                toast.success("Exported timesheets to CSV");
+              }}>
+                <Download className="h-4 w-4 mr-1" />Export
+              </Button>
+            )}
+            {canEdit && (
+              <Button size="sm" onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Log Time
+              </Button>
+            )}
+          </div>
+        }
       />
 
       {/* Summary Bar */}
@@ -325,7 +353,7 @@ export default function Timesheets() {
 
         {/* DAILY VIEW */}
         <TabsContent value="daily">
-          <div className="data-table-container">
+          <div className="rounded-lg border bg-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
@@ -348,9 +376,13 @@ export default function Timesheets() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={canBulkEdit ? 12 : (canEdit ? 11 : 10)} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableSkeleton columns={canBulkEdit ? 12 : (canEdit ? 11 : 10)} rows={8} />
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={canBulkEdit ? 12 : (canEdit ? 11 : 10)} className="text-center py-8 text-muted-foreground">No time entries found.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={canBulkEdit ? 12 : (canEdit ? 11 : 10)}>
+                      <EmptyState icon={Clock} title="No time entries found" description="Log your first time entry or adjust filters to see data." />
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filtered.map((t: any) => {
                     const cost = Number(t.hours || 0) * Number(t.cost_rate || 0);
@@ -398,7 +430,7 @@ export default function Timesheets() {
 
         {/* WEEKLY VIEW */}
         <TabsContent value="weekly">
-          <div className="data-table-container">
+          <div className="rounded-lg border bg-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
@@ -414,8 +446,14 @@ export default function Timesheets() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {weeklyGrouped.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No time entries this week.</TableCell></TableRow>
+                {isLoading ? (
+                  <TableSkeleton columns={8} rows={4} />
+                ) : weeklyGrouped.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                      <EmptyState icon={Clock} title="No time entries this week" description="Navigate to a different week or log time entries." />
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   weeklyGrouped.map((row) => (
                     <TableRow key={`${row.resourceId}::${row.projectId}`} className="border-border hover:bg-muted/50">

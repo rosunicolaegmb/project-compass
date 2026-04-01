@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatCard } from "@/components/StatCard";
-import { Plus, Pencil, Trash2, Search, DollarSign, Receipt, Clock, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, DollarSign, Receipt, Clock, TrendingUp, Download } from "lucide-react";
+import { saveFilters, loadFilters } from "@/lib/filters";
+import { exportToCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,14 +30,19 @@ export default function Expenses() {
   const canEdit = roles.includes("admin") || roles.includes("office_admin");
   const queryClient = useQueryClient();
 
-  const [search, setSearch] = useState("");
-  const [filterProject, setFilterProject] = useState("all");
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterMonth, setFilterMonth] = useState("");
+  const saved = loadFilters("expenses");
+  const [search, setSearch] = useState(saved.search || "");
+  const [filterProject, setFilterProject] = useState(saved.project || "all");
+  const [filterCategory, setFilterCategory] = useState(saved.category || "all");
+  const [filterStatus, setFilterStatus] = useState(saved.status || "all");
+  const [filterMonth, setFilterMonth] = useState(saved.month || "");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+
+  useEffect(() => {
+    saveFilters("expenses", { search, project: filterProject, category: filterCategory, status: filterStatus, month: filterMonth });
+  }, [search, filterProject, filterCategory, filterStatus, filterMonth]);
 
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ["expense-entries"],
@@ -102,21 +111,46 @@ export default function Expenses() {
       const { error } = await supabase.from("expense_entries").update({ deleted_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["expense-entries"] }); toast.success("Expense deleted"); setDeleteTarget(null); },
-    onError: (err: Error) => toast.error(err.message),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["expense-entries"] }); toast.success("Expense deleted successfully"); setDeleteTarget(null); },
+    onError: (err: Error) => toast.error(`Failed to delete expense: ${err.message}`),
   });
 
-  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  const fmtCurrency = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
+  const handleExport = () => {
+    const rows = filtered.map((e: any) => [
+      e.expense_date, e.resources?.display_name || "", e.projects?.name || "",
+      CATEGORY_LABELS[e.category] || e.category, e.description || "", e.amount, e.approval_status,
+    ]);
+    exportToCsv("expenses.csv", ["Date", "Submitted By", "Project", "Category", "Description", "Amount", "Status"], rows);
+    toast.success("Exported expenses to CSV");
+  };
+
+  const colCount = canEdit ? 8 : 7;
 
   return (
     <div className="page-container">
       <PageHeader title="Expenses" description="Track and approve project expenses"
-        actions={canEdit ? <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="h-4 w-4 mr-1" />Add Expense</Button> : undefined} />
+        actions={
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-1" />Export
+              </Button>
+            )}
+            {canEdit && (
+              <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" />Add Expense
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Expenses" value={fmt(stats.total)} icon={DollarSign} />
-        <StatCard title="Pending Approval" value={`${stats.pendingCount} (${fmt(stats.pendingAmt)})`} icon={Clock} />
-        <StatCard title="Billable Expenses" value={fmt(stats.billable)} icon={Receipt} />
+        <StatCard title="Total Expenses" value={fmtCurrency(stats.total)} icon={DollarSign} />
+        <StatCard title="Pending Approval" value={`${stats.pendingCount} (${fmtCurrency(stats.pendingAmt)})`} icon={Clock} />
+        <StatCard title="Billable Expenses" value={fmtCurrency(stats.billable)} icon={Receipt} />
         <StatCard title="Entries" value={String(filtered.length)} icon={TrendingUp} />
       </div>
 
@@ -151,15 +185,15 @@ export default function Expenses() {
         <Input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="w-[160px]" />
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Submitted By</TableHead>
+              <TableHead className="hidden sm:table-cell">Submitted By</TableHead>
               <TableHead>Project</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Description</TableHead>
+              <TableHead className="hidden md:table-cell">Category</TableHead>
+              <TableHead className="hidden lg:table-cell">Description</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead>Status</TableHead>
               {canEdit && <TableHead className="w-[80px]">Actions</TableHead>}
@@ -167,17 +201,30 @@ export default function Expenses() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={canEdit ? 8 : 7} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableSkeleton columns={colCount} rows={6} />
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={canEdit ? 8 : 7} className="text-center py-8 text-muted-foreground">No expenses found</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={colCount}>
+                  <EmptyState
+                    icon={Receipt}
+                    title="No expenses found"
+                    description="Add your first expense or adjust filters to see data."
+                    action={canEdit ? (
+                      <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+                        <Plus className="h-4 w-4 mr-1" />Add Expense
+                      </Button>
+                    ) : undefined}
+                  />
+                </TableCell>
+              </TableRow>
             ) : filtered.map((e: any) => (
               <TableRow key={e.id}>
                 <TableCell className="whitespace-nowrap">{format(new Date(e.expense_date), "MMM dd, yyyy")}</TableCell>
-                <TableCell>{e.resources?.display_name || "—"}</TableCell>
+                <TableCell className="hidden sm:table-cell">{e.resources?.display_name || "—"}</TableCell>
                 <TableCell>{e.projects?.name || "—"}</TableCell>
-                <TableCell>{CATEGORY_LABELS[e.category] || e.category}</TableCell>
-                <TableCell className="max-w-[200px] truncate">{e.description || "—"}</TableCell>
-                <TableCell className="text-right font-medium">{fmt(Number(e.amount))}</TableCell>
+                <TableCell className="hidden md:table-cell">{CATEGORY_LABELS[e.category] || e.category}</TableCell>
+                <TableCell className="max-w-[200px] truncate hidden lg:table-cell">{e.description || "—"}</TableCell>
+                <TableCell className="text-right font-medium tabular-nums">{fmtCurrency(Number(e.amount))}</TableCell>
                 <TableCell><StatusBadge status={e.approval_status === "rejected" ? "at-risk" : e.approval_status} /></TableCell>
                 {canEdit && (
                   <TableCell>

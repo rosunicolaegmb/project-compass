@@ -5,13 +5,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditModule } from "@/lib/auth-helpers";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ResourceFormDialog } from "@/components/resources/ResourceFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, UserCircle, Download } from "lucide-react";
+import { exportToCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 
 const EMPLOYMENT_LABELS: Record<string, string> = {
@@ -30,11 +33,7 @@ export default function Resources() {
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ["resources"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("resources")
-        .select("*, delivery_roles(name)")
-        .is("deleted_at", null)
-        .order("display_name");
+      const { data, error } = await supabase.from("resources").select("*, delivery_roles(name)").is("deleted_at", null).order("display_name");
       if (error) throw error;
       return data;
     },
@@ -43,12 +42,7 @@ export default function Resources() {
   const { data: deliveryRoles = [] } = useQuery({
     queryKey: ["delivery-roles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("delivery_roles")
-        .select("*")
-        .is("deleted_at", null)
-        .eq("is_active", true)
-        .order("name");
+      const { data, error } = await supabase.from("delivery_roles").select("*").is("deleted_at", null).eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
@@ -56,18 +50,15 @@ export default function Resources() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("resources")
-        .update({ deleted_at: new Date().toISOString(), is_active: false })
-        .eq("id", id);
+      const { error } = await supabase.from("resources").update({ deleted_at: new Date().toISOString(), is_active: false }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resources"] });
-      toast.success("Resource deleted");
+      toast.success("Resource deleted successfully");
       setDeleting(null);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(`Failed to delete resource: ${err.message}`),
   });
 
   const filtered = resources.filter((r: any) => {
@@ -76,18 +67,40 @@ export default function Resources() {
       .filter(Boolean).some((v: string) => v.toLowerCase().includes(q));
   });
 
-  const fmt = (n: number | null | undefined) => n != null ? `$${Number(n).toLocaleString()}/hr` : "—";
+  const fmtRate = (n: number | null | undefined) => n != null ? `$${Number(n).toLocaleString()}/hr` : "—";
+
+  const handleExport = () => {
+    const rows = filtered.map((r: any) => [
+      r.display_name, r.email || "", (r.delivery_roles as any)?.name || "",
+      r.department || "", EMPLOYMENT_LABELS[r.employment_type] || "",
+      r.default_cost_rate || "", r.default_bill_rate || "",
+      r.is_active ? "Active" : "Inactive",
+    ]);
+    exportToCsv("resources.csv", ["Name", "Email", "Role", "Department", "Type", "Cost Rate", "Bill Rate", "Status"], rows);
+    toast.success("Exported resources to CSV");
+  };
+
+  const colCount = canEdit ? 9 : 8;
 
   return (
     <div className="page-container">
       <PageHeader
         title="Resources"
         description="Manage team members, roles, and allocation"
-        actions={canEdit ? (
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Add Resource
-          </Button>
-        ) : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-1" />Export
+              </Button>
+            )}
+            {canEdit && (
+              <Button size="sm" onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Add Resource
+              </Button>
+            )}
+          </div>
+        }
       />
 
       <div className="flex items-center gap-3">
@@ -97,15 +110,15 @@ export default function Resources() {
         </div>
       </div>
 
-      <div className="data-table-container">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
               <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead className="hidden md:table-cell">Email</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead className="hidden lg:table-cell">Department</TableHead>
+              <TableHead className="hidden sm:table-cell">Type</TableHead>
               <TableHead className="text-right">Cost Rate</TableHead>
               <TableHead className="text-right">Bill Rate</TableHead>
               <TableHead>Status</TableHead>
@@ -114,26 +127,37 @@ export default function Resources() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableSkeleton columns={colCount} rows={6} />
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8 text-muted-foreground">No resources found.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={colCount}>
+                  <EmptyState
+                    icon={UserCircle}
+                    title={search ? "No resources match your search" : "No resources yet"}
+                    description={search ? "Try different search terms" : "Add team members to start assigning them to projects."}
+                    action={canEdit && !search ? (
+                      <Button size="sm" onClick={() => setShowCreate(true)}>
+                        <Plus className="h-4 w-4 mr-1" />Add Resource
+                      </Button>
+                    ) : undefined}
+                  />
+                </TableCell>
+              </TableRow>
             ) : (
               filtered.map((r: any) => (
                 <TableRow key={r.id} className="border-border hover:bg-muted/50">
                   <TableCell className="font-medium">{r.display_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.email || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">{r.email || "—"}</TableCell>
                   <TableCell>{(r.delivery_roles as any)?.name || "—"}</TableCell>
-                  <TableCell>{r.department || "—"}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">{r.department || "—"}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant="outline" className="text-xs">
                       {EMPLOYMENT_LABELS[r.employment_type] || r.employment_type || "—"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">{fmt(r.default_cost_rate)}</TableCell>
-                  <TableCell className="text-right">{fmt(r.default_bill_rate)}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={r.is_active ? "active" : "archived"} />
-                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtRate(r.default_cost_rate)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtRate(r.default_bill_rate)}</TableCell>
+                  <TableCell><StatusBadge status={r.is_active ? "active" : "archived"} /></TableCell>
                   {canEdit && (
                     <TableCell>
                       <div className="flex items-center gap-1">

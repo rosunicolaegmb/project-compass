@@ -232,7 +232,16 @@ export default function Dashboard() {
 
   return (
     <div className="page-container">
-      <PageHeader title="Executive Dashboard" description="Portfolio-level financial performance and health indicators" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <PageHeader title="Executive Dashboard" description="Portfolio-level financial performance and health indicators" />
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)} className="shrink-0">
+          <TabsList>
+            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+            <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+            <TabsTrigger value="yearly">Yearly</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* ── Row 1: Financial KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

@@ -215,7 +215,14 @@ export default function Projects() {
                 };
                 return (
                   <TableRow key={project.id} className="border-border hover:bg-muted/50">
-                    <TableCell className="font-medium">{project.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <button
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                        className="text-left hover:text-primary hover:underline transition-colors"
+                      >
+                        {project.name}
+                      </button>
+                    </TableCell>
                     <TableCell>{clientName}</TableCell>
                     <TableCell className="text-muted-foreground">{project.code || "—"}</TableCell>
                     <TableCell>

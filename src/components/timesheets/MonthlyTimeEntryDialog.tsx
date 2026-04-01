@@ -107,7 +107,6 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       const resource = resources.find((r: any) => r.id === watchResourceId);
       if (resource) {
         form.setValue("bill_rate", Number(resource.default_bill_rate || 0));
-        form.setValue("cost_rate", Number(resource.default_cost_rate || 0));
         form.setValue("currency", resource.currency || "EUR");
       }
     }

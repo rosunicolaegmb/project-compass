@@ -575,8 +575,12 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          notes: string | null
+          planned_budget: number | null
           pm_resource_id: string | null
           project_type: Database["public"]["Enums"]["project_type"]
+          revenue_model: string | null
+          revised_budget: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
           total_budget: number | null
@@ -593,8 +597,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          notes?: string | null
+          planned_budget?: number | null
           pm_resource_id?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
+          revenue_model?: string | null
+          revised_budget?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           total_budget?: number | null
@@ -611,8 +619,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          notes?: string | null
+          planned_budget?: number | null
           pm_resource_id?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
+          revenue_model?: string | null
+          revised_budget?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           total_budget?: number | null

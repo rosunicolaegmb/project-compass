@@ -27,8 +27,7 @@ let rateCacheLoaded = false;
 export async function loadConversionRates(): Promise<Record<string, number>> {
   const { data, error } = await supabase
     .from("currency_conversion_rates")
-    .select("year, month, rate")
-    .eq("from_currency", "GBP")
+    .select("year, month, rate, from_currency")
     .eq("to_currency", "EUR");
 
   if (error) {
@@ -38,7 +37,7 @@ export async function loadConversionRates(): Promise<Record<string, number>> {
 
   rateCache = {};
   data?.forEach((r) => {
-    rateCache[`${r.year}-${r.month}`] = Number(r.rate);
+    rateCache[`${r.from_currency}-${r.year}-${r.month}`] = Number(r.rate);
   });
   rateCacheLoaded = true;
   return rateCache;

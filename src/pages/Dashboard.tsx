@@ -33,7 +33,27 @@ const tooltipStyle = {
   borderRadius: 8, color: "hsl(var(--foreground))", fontSize: 12,
 };
 
+type Period = "monthly" | "quarterly" | "yearly";
+
+function getPeriodRange(period: Period): { from: string; to: string } {
+  const now = new Date();
+  let from: Date;
+  if (period === "monthly") {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (period === "quarterly") {
+    const q = Math.floor(now.getMonth() / 3) * 3;
+    from = new Date(now.getFullYear(), q, 1);
+  } else {
+    from = new Date(now.getFullYear(), 0, 1);
+  }
+  return {
+    from: from.toISOString().substring(0, 10),
+    to: now.toISOString().substring(0, 10),
+  };
+}
+
 export default function Dashboard() {
+  const [period, setPeriod] = useState<Period>("yearly");
   // ── data queries ──
   const { data: projects = [] } = useQuery({
     queryKey: ["dash-projects"],

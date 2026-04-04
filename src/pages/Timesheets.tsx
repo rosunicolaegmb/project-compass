@@ -60,6 +60,7 @@ export default function Timesheets() {
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // Month range for daily view
   const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");

@@ -208,7 +208,8 @@ export default function GeneralExpensesPage() {
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
               <TableHead>Description</TableHead>
-              <TableHead className="text-right w-40">Amount (€)</TableHead>
+              <TableHead className="text-right w-40">Amount</TableHead>
+              <TableHead className="w-20">Currency</TableHead>
               <TableHead className="w-16">Actions</TableHead>
             </TableRow>
           </TableHeader>

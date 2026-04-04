@@ -163,6 +163,24 @@ export default function Timesheets() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Bulk delete (soft-delete)
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("time_entries")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["time-entries"] });
+      toast.success(`${selectedIds.size} entries deleted`);
+      setSelectedIds(new Set());
+      setShowBulkDelete(false);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   // Filter
   const filtered = useMemo(() => {
     return timeEntries.filter((t: any) => {

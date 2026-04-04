@@ -23,6 +23,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ConfigurePage from "./pages/ConfigurePage";
 import ConversionRatesPage from "./pages/ConversionRatesPage";
 import SalariesPage from "./pages/SalariesPage";
+import GeneralExpensesPage from "./pages/GeneralExpensesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/configure" element={<ProtectedRoute allowedRoles={["admin"]}><ConfigurePage /></ProtectedRoute>} />
               <Route path="/configure/conversion-rates" element={<ProtectedRoute allowedRoles={["admin"]}><ConversionRatesPage /></ProtectedRoute>} />
               <Route path="/configure/salaries" element={<ProtectedRoute allowedRoles={["admin"]}><SalariesPage /></ProtectedRoute>} />
+              <Route path="/configure/general-expenses" element={<ProtectedRoute allowedRoles={["admin"]}><GeneralExpensesPage /></ProtectedRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -129,7 +129,17 @@ export default function GeneralExpensesPage() {
     onError: (err: Error) => { toast.error(err.message); setCopyConfirm(false); },
   });
 
-  const total = expenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
+  const getEurRate = (currency: string): number => {
+    if (currency === "EUR") return 1;
+    const rate = conversionRates.find(
+      (r: any) => r.from_currency === currency && r.to_currency === "EUR"
+    );
+    return rate ? Number(rate.rate) : 1;
+  };
+
+  const totalEur = expenses.reduce((s: number, e: any) => {
+    return s + Number(e.amount) * getEurRate(e.currency);
+  }, 0);
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   const prevMonthLabel = (() => {

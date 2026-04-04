@@ -46,7 +46,19 @@ export default function GeneralExpensesPage() {
     },
   });
 
-  const addMutation = useMutation({
+  // Fetch conversion rates for this month to convert totals to EUR
+  const { data: conversionRates = [] } = useQuery({
+    queryKey: ["conversion-rates", year, month],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("currency_conversion_rates")
+        .select("from_currency, to_currency, rate")
+        .eq("year", year)
+        .eq("month", month);
+      if (error) throw error;
+      return data;
+    },
+  });
     mutationFn: async () => {
       const { error } = await supabase.from("general_expenses").insert({
         description: newDesc.trim(),

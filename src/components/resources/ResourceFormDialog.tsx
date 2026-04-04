@@ -105,7 +105,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
       if (!resource?.id) return [];
       const { data, error } = await supabase
         .from("project_members")
-        .select("id, project_id, allocation_percentage, start_date, end_date, projects(name, start_date, end_date)")
+        .select("id, project_id, allocation_percentage, start_date, end_date, is_primary, projects(name, start_date, end_date)")
         .eq("resource_id", resource.id);
       if (error) throw error;
       return data;

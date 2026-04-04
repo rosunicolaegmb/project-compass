@@ -231,8 +231,9 @@ export default function GeneralExpensesPage() {
                   <TableRow key={exp.id} className="border-border">
                     <TableCell>{exp.description}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      €{Number(exp.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {CURRENCY_SYMS[exp.currency] || ""}{Number(exp.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{exp.currency}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -248,8 +249,9 @@ export default function GeneralExpensesPage() {
                 <TableRow className="border-border bg-muted/30 font-medium">
                   <TableCell>Total</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    €{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
+                  <TableCell />
                   <TableCell />
                 </TableRow>
               </>

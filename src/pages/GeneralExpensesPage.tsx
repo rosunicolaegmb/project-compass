@@ -272,11 +272,46 @@ export default function GeneralExpensesPage() {
               <>
                 {expenses.map((exp: any) => (
                   <TableRow key={exp.id} className="border-border">
-                    <TableCell>{exp.description}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {CURRENCY_SYMS[exp.currency] || ""}{Number(exp.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <TableCell>
+                      <Input
+                        defaultValue={exp.description}
+                        className="h-8 text-sm border-transparent hover:border-border focus:border-border bg-transparent"
+                        onBlur={(e) => {
+                          if (e.target.value !== exp.description) {
+                            updateMutation.mutate({ id: exp.id, field: "description", value: e.target.value });
+                          }
+                        }}
+                      />
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{exp.currency}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        defaultValue={exp.amount}
+                        className="h-8 text-sm text-right border-transparent hover:border-border focus:border-border bg-transparent tabular-nums w-32 ml-auto"
+                        onBlur={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          if (val !== Number(exp.amount)) {
+                            updateMutation.mutate({ id: exp.id, field: "amount", value: val });
+                          }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={exp.currency}
+                        onValueChange={(v) => updateMutation.mutate({ id: exp.id, field: "currency", value: v })}
+                      >
+                        <SelectTrigger className="h-8 w-20 text-sm border-transparent hover:border-border bg-transparent">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CURRENCIES.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"

@@ -172,7 +172,7 @@ export default function GeneralExpensesPage() {
           />
         </div>
         <div className="w-36">
-          <label className="text-xs text-muted-foreground mb-1 block">Amount (€)</label>
+          <label className="text-xs text-muted-foreground mb-1 block">Amount</label>
           <Input
             type="number"
             step="0.01"
@@ -181,6 +181,17 @@ export default function GeneralExpensesPage() {
             onChange={(e) => setNewAmount(e.target.value)}
             className="h-9 text-right"
           />
+        </div>
+        <div className="w-28">
+          <label className="text-xs text-muted-foreground mb-1 block">Currency</label>
+          <Select value={newCurrency} onValueChange={setNewCurrency}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button
           size="sm"

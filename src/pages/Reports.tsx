@@ -293,6 +293,8 @@ export default function Reports() {
     <div className="page-container">
       <PageHeader title="Reports" description="Financial summaries and operational insights" />
 
+      <MissingRatesWarning missingCurrencies={rptMissingRates} month={rptNow.getMonth() + 1} year={rptNow.getFullYear()} />
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-2">
         <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-[150px]" placeholder="From" />

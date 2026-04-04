@@ -156,9 +156,12 @@ export default function GeneralExpensesPage() {
 
       return { inserted: toInsert.length, updated: toUpdate.length };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["general-expenses", year, month] });
-      toast.success("Copied expenses from previous month");
+      const parts = [];
+      if (result?.inserted) parts.push(`${result.inserted} added`);
+      if (result?.updated) parts.push(`${result.updated} updated`);
+      toast.success(`Synced from previous month: ${parts.join(", ")}`);
       setCopyConfirm(false);
     },
     onError: (err: Error) => { toast.error(err.message); setCopyConfirm(false); },

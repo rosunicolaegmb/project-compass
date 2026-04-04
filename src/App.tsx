@@ -23,6 +23,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ConfigurePage from "./pages/ConfigurePage";
 import ConversionRatesPage from "./pages/ConversionRatesPage";
 import SalariesPage from "./pages/SalariesPage";
+import GeneralExpensesPage from "./pages/GeneralExpensesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

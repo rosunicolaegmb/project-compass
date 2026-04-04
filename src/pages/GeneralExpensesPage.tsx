@@ -5,6 +5,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { MissingRatesWarning } from "@/components/MissingRatesWarning";
@@ -350,14 +354,22 @@ export default function GeneralExpensesPage() {
       />
 
       {/* Copy confirmation */}
-      <DeleteConfirmDialog
-        open={copyConfirm}
-        onOpenChange={setCopyConfirm}
-        onConfirm={() => copyMutation.mutate()}
-        title="Copy from Previous Month"
-        description={`This will copy all expenses from ${prevMonthLabel} into ${MONTHS[month - 1]} ${year}. Existing entries will not be removed. Continue?`}
-        loading={copyMutation.isPending}
-      />
+      <AlertDialog open={copyConfirm} onOpenChange={setCopyConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Copy from Previous Month</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will copy all expenses from {prevMonthLabel} into {MONTHS[month - 1]} {year}. Existing entries will not be removed. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={copyMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending}>
+              {copyMutation.isPending ? "Copying..." : "Continue"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

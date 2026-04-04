@@ -270,11 +270,11 @@ export default function GeneralExpensesPage() {
                   </TableRow>
                 ))}
                 <TableRow className="border-border bg-muted/30 font-medium">
-                  <TableCell>Total</TableCell>
+                  <TableCell>Total (EUR)</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    €{totalEur.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell />
+                  <TableCell className="text-muted-foreground text-sm">EUR</TableCell>
                   <TableCell />
                 </TableRow>
               </>

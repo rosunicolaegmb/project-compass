@@ -111,7 +111,18 @@ export default function Dashboard() {
     },
   });
 
-  // ── computed metrics ──
+  // Detect missing conversion rates for current month
+  const now2 = new Date();
+  const dashMissingRates = useMemo(() => {
+    const usedCurrencies = [
+      ...new Set([
+        ...timeEntries.map((t: any) => t.currency),
+        ...expenseEntries.map((e: any) => e.currency),
+      ]),
+    ].filter(Boolean);
+    return getMissingRates(usedCurrencies, now2.getFullYear(), now2.getMonth() + 1);
+  }, [timeEntries, expenseEntries]);
+
   const metrics = useMemo(() => {
     const { from, to } = getPeriodRange(period);
 

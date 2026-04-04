@@ -739,6 +739,47 @@ export type Database = {
           },
         ]
       }
+      resource_monthly_costs: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          month: number
+          resource_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          month: number
+          resource_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          month?: number
+          resource_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_monthly_costs_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_rate_history: {
         Row: {
           bill_rate: number

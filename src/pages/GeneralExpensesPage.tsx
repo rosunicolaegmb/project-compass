@@ -91,6 +91,7 @@ export default function GeneralExpensesPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("general_expenses").delete().eq("id", id);
       if (error) throw error;

@@ -141,6 +141,13 @@ export default function GeneralExpensesPage() {
   const totalEur = expenses.reduce((s: number, e: any) => {
     return s + Number(e.amount) * getEurRate(e.currency);
   }, 0);
+
+  // Detect missing conversion rates
+  const usedCurrencies = [...new Set(expenses.map((e: any) => e.currency))].filter((c: string) => c !== "EUR");
+  const missingCurrencies = usedCurrencies.filter((c: string) => {
+    return !conversionRates.some((r: any) => r.from_currency === c && r.to_currency === "EUR");
+  });
+
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   const prevMonthLabel = (() => {

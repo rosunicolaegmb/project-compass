@@ -1,31 +1,41 @@
 
 
-## Plan: Add "Delete All Selected" to Timesheets Bulk Actions
+## Plan: Add "Primary Project" checkbox to resource allocations
 
 ### What changes
 
-Add a "Delete Selected" button next to the existing "Approve Selected" button in the bulk actions bar. It will soft-delete all selected time entries after a confirmation dialog.
+Add an `is_primary` boolean column to `project_members` and a checkbox in each allocation row. Only one allocation per resource can be primary — selecting one automatically deselects the others.
 
-### Implementation
+### Database
 
-**File: `src/pages/Timesheets.tsx`**
+**Migration**: Add `is_primary` column to `project_members`:
+```sql
+ALTER TABLE public.project_members ADD COLUMN is_primary boolean NOT NULL DEFAULT false;
+```
 
-1. **Add a bulk delete mutation** — similar to `bulkApproveMutation`, but sets `deleted_at` on all selected IDs using `.in("id", ids)`.
+No new RLS policies needed — existing policies cover the column.
 
-2. **Add state for bulk delete confirmation** — `showBulkDelete` boolean to control a `DeleteConfirmDialog`.
+### Code changes
 
-3. **Add "Delete Selected" button** in the bulk actions bar (line ~331-339), styled as destructive variant, next to "Approve Selected".
+**File: `src/components/resources/ResourceFormDialog.tsx`**
 
-4. **Add `DeleteConfirmDialog`** for bulk delete — shows count of entries to be deleted, calls the bulk delete mutation on confirm, clears selection on success.
+1. Add `is_primary` to the `Allocation` interface.
 
-5. **Import `Trash2`** icon (already imported).
+2. When loading existing allocations, read `is_primary` from `project_members`.
+
+3. Add a `Checkbox` (with label "Primary") in each allocation row, next to the % input. When checked, set all other allocations' `is_primary` to `false`.
+
+4. Include `is_primary` in insert/update calls to `project_members`.
+
+5. Validation: if multiple allocations exist and none is primary, optionally warn (not block).
 
 ### UI
 
-The bulk actions bar will show:
+Each allocation row will look like:
 ```text
-[12 selected] [✓ Approve Selected] [🗑 Delete Selected] [Deselect All]
+[Project dropdown] [100] % [✓ Primary] [🗑]
+Start: ___  End: ___
 ```
 
-Clicking "Delete Selected" opens a confirmation dialog before executing.
+Clicking "Primary" on one row unchecks all others automatically.
 

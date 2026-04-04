@@ -104,7 +104,17 @@ export default function Reports() {
     },
   });
 
-  const { data: monthlyForecasts = [] } = useQuery({
+  const rptNow = new Date();
+  const rptMissingRates = useMemo(() => {
+    const usedCurrencies = [
+      ...new Set([
+        ...timeEntries.map((t: any) => t.currency),
+        ...expenses.map((e: any) => e.currency),
+      ]),
+    ].filter(Boolean);
+    return getMissingRates(usedCurrencies, rptNow.getFullYear(), rptNow.getMonth() + 1);
+  }, [timeEntries, expenses]);
+
     queryKey: ["rpt-monthly-forecasts"],
     queryFn: async () => {
       const { data, error } = await supabase.from("monthly_forecasts")

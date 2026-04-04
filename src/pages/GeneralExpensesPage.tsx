@@ -218,7 +218,7 @@ export default function GeneralExpensesPage() {
               <TableSkeleton columns={4} rows={4} />
             ) : expenses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3}>
+                <TableCell colSpan={4}>
                   <EmptyState
                     title="No expenses for this month"
                     description="Add expenses above or copy from the previous month."

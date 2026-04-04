@@ -53,6 +53,7 @@ interface Allocation {
   allocation_percentage: number;
   start_date: string;
   end_date: string;
+  is_primary: boolean;
   isNew?: boolean;
 }
 

@@ -21,6 +21,8 @@ import ProjectDetail from "./pages/ProjectDetail";
 import AuditLog from "./pages/AuditLog";
 import SettingsPage from "./pages/SettingsPage";
 import ConfigurePage from "./pages/ConfigurePage";
+import ConversionRatesPage from "./pages/ConversionRatesPage";
+import SalariesPage from "./pages/SalariesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,8 @@ const App = () => (
               <Route path="/audit-log" element={<ProtectedRoute allowedRoles={["admin"]}><AuditLog /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowedRoles={["admin"]}><SettingsPage /></ProtectedRoute>} />
               <Route path="/configure" element={<ProtectedRoute allowedRoles={["admin"]}><ConfigurePage /></ProtectedRoute>} />
+              <Route path="/configure/conversion-rates" element={<ProtectedRoute allowedRoles={["admin"]}><ConversionRatesPage /></ProtectedRoute>} />
+              <Route path="/configure/salaries" element={<ProtectedRoute allowedRoles={["admin"]}><SalariesPage /></ProtectedRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

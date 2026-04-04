@@ -95,6 +95,8 @@ export const PERMISSIONS = {
   auditLog: { view: ["admin"] as AppRole[], edit: [] as AppRole[] },
   settings: { view: ["admin"] as AppRole[], edit: ["admin"] as AppRole[] },
   configure: { view: ["admin"] as AppRole[], edit: ["admin"] as AppRole[] },
+  conversionRates: { view: ["admin"] as AppRole[], edit: ["admin"] as AppRole[] },
+  salaries: { view: ["admin"] as AppRole[], edit: ["admin"] as AppRole[] },
 } as const;
 
 export type ModuleKey = keyof typeof PERMISSIONS;

@@ -60,6 +60,7 @@ export default function Timesheets() {
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // Month range for daily view
   const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");
@@ -158,6 +159,24 @@ export default function Timesheets() {
       queryClient.invalidateQueries({ queryKey: ["time-entries"] });
       toast.success(`${selectedIds.size} entries approved`);
       setSelectedIds(new Set());
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Bulk delete (soft-delete)
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("time_entries")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["time-entries"] });
+      toast.success(`${selectedIds.size} entries deleted`);
+      setSelectedIds(new Set());
+      setShowBulkDelete(false);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -333,11 +352,23 @@ export default function Timesheets() {
           <Button size="sm" variant="outline" onClick={() => bulkApproveMutation.mutate(Array.from(selectedIds))} disabled={bulkApproveMutation.isPending}>
             <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve Selected
           </Button>
+          <Button size="sm" variant="destructive" onClick={() => setShowBulkDelete(true)} disabled={bulkDeleteMutation.isPending}>
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Selected
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Deselect All
           </Button>
         </div>
       )}
+
+      <DeleteConfirmDialog
+        open={showBulkDelete}
+        onOpenChange={setShowBulkDelete}
+        onConfirm={() => bulkDeleteMutation.mutate(Array.from(selectedIds))}
+        title="Delete selected time entries?"
+        description={`This will soft-delete ${selectedIds.size} time entries. They can be recovered later if needed.`}
+        loading={bulkDeleteMutation.isPending}
+      />
 
       <Tabs value={view} onValueChange={(v) => setView(v as "daily" | "weekly")} className="space-y-4">
         <div className="flex items-center justify-between">

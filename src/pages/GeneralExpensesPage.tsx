@@ -168,6 +168,8 @@ export default function GeneralExpensesPage() {
         }
       />
 
+      <MissingRatesWarning missingCurrencies={missingCurrencies} month={month} year={year} />
+
       {/* Month/Year selector */}
       <div className="flex items-center gap-3 flex-wrap">
         <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>

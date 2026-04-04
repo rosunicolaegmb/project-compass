@@ -306,6 +306,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
             allocation_percentage: a.allocation_percentage,
             start_date: a.start_date || null,
             end_date: a.end_date || null,
+            is_primary: a.is_primary,
           }))
         );
         if (error) throw error;

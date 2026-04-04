@@ -59,6 +59,7 @@ export default function GeneralExpensesPage() {
       return data;
     },
   });
+  const addMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("general_expenses").insert({
         description: newDesc.trim(),

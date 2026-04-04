@@ -290,6 +290,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
             allocation_percentage: alloc.allocation_percentage,
             start_date: alloc.start_date || null,
             end_date: alloc.end_date || null,
+            is_primary: alloc.is_primary,
           }).eq("id", alloc.id!);
           if (error) throw error;
         }

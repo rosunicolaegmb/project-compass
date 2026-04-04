@@ -80,7 +80,17 @@ export default function GeneralExpensesPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const deleteMutation = useMutation({
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: string; value: any }) => {
+      const { error } = await supabase.from("general_expenses").update({ [field]: value }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["general-expenses", year, month] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("general_expenses").delete().eq("id", id);
       if (error) throw error;

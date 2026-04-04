@@ -154,6 +154,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
           allocation_percentage: Number(a.allocation_percentage || 100),
           start_date: a.start_date || "",
           end_date: a.end_date || "",
+          is_primary: a.is_primary ?? false,
         }));
         // Avoid unnecessary state updates
         if (JSON.stringify(prev) === JSON.stringify(newAllocs)) return prev;

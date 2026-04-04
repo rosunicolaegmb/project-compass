@@ -27,7 +27,9 @@ export default function GeneralExpensesPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [newCurrency, setNewCurrency] = useState("EUR");
-  const [copyConfirm, setCopyConfirm] = useState(false);
+  const [deleting, setDeleting] = useState<any>(null);
+  const CURRENCIES = ["EUR", "RON", "GBP"] as const;
+  const CURRENCY_SYMS: Record<string, string> = { EUR: "€", RON: "lei", GBP: "£" };
 
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ["general-expenses", year, month],

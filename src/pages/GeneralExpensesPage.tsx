@@ -110,36 +110,58 @@ export default function GeneralExpensesPage() {
 
   const copyMutation = useMutation({
     mutationFn: async () => {
-      // Calculate previous month
       let prevMonth = month - 1;
       let prevYear = year;
       if (prevMonth < 1) { prevMonth = 12; prevYear -= 1; }
 
-      const { data: prevExpenses, error: fetchErr } = await supabase
-        .from("general_expenses")
-        .select("description, amount, currency")
-        .eq("year", prevYear)
-        .eq("month", prevMonth);
+      const [{ data: prevExpenses, error: fetchErr }, { data: currentExpenses, error: currErr }] = await Promise.all([
+        supabase.from("general_expenses").select("description, amount, currency").eq("year", prevYear).eq("month", prevMonth),
+        supabase.from("general_expenses").select("id, description, amount, currency").eq("year", year).eq("month", month),
+      ]);
       if (fetchErr) throw fetchErr;
+      if (currErr) throw currErr;
 
       if (!prevExpenses || prevExpenses.length === 0) {
         throw new Error(`No expenses found for ${MONTHS[prevMonth - 1]} ${prevYear}`);
       }
 
-      const { error } = await supabase.from("general_expenses").insert(
-        prevExpenses.map((e: any) => ({
-          description: e.description,
-          amount: e.amount,
-          currency: e.currency,
-          year,
-          month,
-        }))
-      );
-      if (error) throw error;
+      const currentByName = new Map((currentExpenses || []).map((e: any) => [e.description.toLowerCase(), e]));
+      const toInsert: any[] = [];
+      const toUpdate: { id: string; amount: number; currency: string }[] = [];
+
+      for (const prev of prevExpenses) {
+        const existing = currentByName.get(prev.description.toLowerCase());
+        if (existing) {
+          if (Number(existing.amount) !== Number(prev.amount) || existing.currency !== prev.currency) {
+            toUpdate.push({ id: existing.id, amount: prev.amount, currency: prev.currency });
+          }
+        } else {
+          toInsert.push({ description: prev.description, amount: prev.amount, currency: prev.currency, year, month });
+        }
+      }
+
+      if (toInsert.length === 0 && toUpdate.length === 0) {
+        throw new Error("All expenses from the previous month already exist with the same amounts");
+      }
+
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from("general_expenses").insert(toInsert);
+        if (error) throw error;
+      }
+
+      for (const u of toUpdate) {
+        const { error } = await supabase.from("general_expenses").update({ amount: u.amount, currency: u.currency }).eq("id", u.id);
+        if (error) throw error;
+      }
+
+      return { inserted: toInsert.length, updated: toUpdate.length };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["general-expenses", year, month] });
-      toast.success("Copied expenses from previous month");
+      const parts = [];
+      if (result?.inserted) parts.push(`${result.inserted} added`);
+      if (result?.updated) parts.push(`${result.updated} updated`);
+      toast.success(`Synced from previous month: ${parts.join(", ")}`);
       setCopyConfirm(false);
     },
     onError: (err: Error) => { toast.error(err.message); setCopyConfirm(false); },

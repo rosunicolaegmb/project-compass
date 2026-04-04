@@ -260,6 +260,8 @@ export default function Dashboard() {
         </Tabs>
       </div>
 
+      <MissingRatesWarning missingCurrencies={dashMissingRates} month={now2.getMonth() + 1} year={now2.getFullYear()} />
+
       {/* ── Row 1: Financial KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <KpiCard label="Planned Budget" value={fmt(metrics.totalPlannedBudget)} icon={Target} />

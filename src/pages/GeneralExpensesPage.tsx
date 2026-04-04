@@ -313,7 +313,7 @@ export default function GeneralExpensesPage() {
                     </TableCell>
                     <TableCell>
                       <Input
-                        type="number"
+                        key={`amt-${exp.id}-${exp.amount}`}
                         step="0.01"
                         defaultValue={exp.amount}
                         className="h-8 text-sm text-right border-transparent hover:border-border focus:border-border bg-transparent tabular-nums w-32 ml-auto"

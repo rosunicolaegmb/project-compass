@@ -26,7 +26,10 @@ export default function GeneralExpensesPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [newDesc, setNewDesc] = useState("");
   const [newAmount, setNewAmount] = useState("");
+  const [newCurrency, setNewCurrency] = useState("EUR");
   const [deleting, setDeleting] = useState<any>(null);
+  const CURRENCIES = ["EUR", "RON", "GBP"] as const;
+  const CURRENCY_SYMS: Record<string, string> = { EUR: "€", RON: "lei", GBP: "£" };
   const [copyConfirm, setCopyConfirm] = useState(false);
 
   const { data: expenses = [], isLoading } = useQuery({
@@ -48,6 +51,7 @@ export default function GeneralExpensesPage() {
       const { error } = await supabase.from("general_expenses").insert({
         description: newDesc.trim(),
         amount: parseFloat(newAmount) || 0,
+        currency: newCurrency,
         year,
         month,
       });
@@ -168,7 +172,7 @@ export default function GeneralExpensesPage() {
           />
         </div>
         <div className="w-36">
-          <label className="text-xs text-muted-foreground mb-1 block">Amount (€)</label>
+          <label className="text-xs text-muted-foreground mb-1 block">Amount</label>
           <Input
             type="number"
             step="0.01"
@@ -177,6 +181,17 @@ export default function GeneralExpensesPage() {
             onChange={(e) => setNewAmount(e.target.value)}
             className="h-9 text-right"
           />
+        </div>
+        <div className="w-28">
+          <label className="text-xs text-muted-foreground mb-1 block">Currency</label>
+          <Select value={newCurrency} onValueChange={setNewCurrency}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button
           size="sm"
@@ -193,16 +208,17 @@ export default function GeneralExpensesPage() {
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
               <TableHead>Description</TableHead>
-              <TableHead className="text-right w-40">Amount (€)</TableHead>
+              <TableHead className="text-right w-40">Amount</TableHead>
+              <TableHead className="w-20">Currency</TableHead>
               <TableHead className="w-16">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableSkeleton columns={3} rows={4} />
+              <TableSkeleton columns={4} rows={4} />
             ) : expenses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3}>
+                <TableCell colSpan={4}>
                   <EmptyState
                     title="No expenses for this month"
                     description="Add expenses above or copy from the previous month."
@@ -215,8 +231,9 @@ export default function GeneralExpensesPage() {
                   <TableRow key={exp.id} className="border-border">
                     <TableCell>{exp.description}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      €{Number(exp.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {CURRENCY_SYMS[exp.currency] || ""}{Number(exp.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{exp.currency}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -232,8 +249,9 @@ export default function GeneralExpensesPage() {
                 <TableRow className="border-border bg-muted/30 font-medium">
                   <TableCell>Total</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    €{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
+                  <TableCell />
                   <TableCell />
                 </TableRow>
               </>

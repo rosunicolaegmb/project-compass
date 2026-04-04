@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import { MissingRatesWarning } from "@/components/MissingRatesWarning";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { ArrowLeft, Plus, Trash2, Copy } from "lucide-react";
@@ -140,6 +141,13 @@ export default function GeneralExpensesPage() {
   const totalEur = expenses.reduce((s: number, e: any) => {
     return s + Number(e.amount) * getEurRate(e.currency);
   }, 0);
+
+  // Detect missing conversion rates
+  const usedCurrencies = [...new Set(expenses.map((e: any) => e.currency))].filter((c: string) => c !== "EUR");
+  const missingCurrencies = usedCurrencies.filter((c: string) => {
+    return !conversionRates.some((r: any) => r.from_currency === c && r.to_currency === "EUR");
+  });
+
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   const prevMonthLabel = (() => {
@@ -159,6 +167,8 @@ export default function GeneralExpensesPage() {
           </Button>
         }
       />
+
+      <MissingRatesWarning missingCurrencies={missingCurrencies} month={month} year={year} />
 
       {/* Month/Year selector */}
       <div className="flex items-center gap-3 flex-wrap">

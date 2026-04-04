@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { loadConversionRates, toEur, fmtEur } from "@/lib/currency";
+import { loadConversionRates, toEur, fmtEur, getMissingRates } from "@/lib/currency";
+import { MissingRatesWarning } from "@/components/MissingRatesWarning";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,6 +103,17 @@ export default function Reports() {
       return data;
     },
   });
+
+  const rptNow = new Date();
+  const rptMissingRates = useMemo(() => {
+    const usedCurrencies = [
+      ...new Set([
+        ...timeEntries.map((t: any) => t.currency),
+        ...expenses.map((e: any) => e.currency),
+      ]),
+    ].filter(Boolean);
+    return getMissingRates(usedCurrencies, rptNow.getFullYear(), rptNow.getMonth() + 1);
+  }, [timeEntries, expenses]);
 
   const { data: monthlyForecasts = [] } = useQuery({
     queryKey: ["rpt-monthly-forecasts"],
@@ -280,6 +292,8 @@ export default function Reports() {
   return (
     <div className="page-container">
       <PageHeader title="Reports" description="Financial summaries and operational insights" />
+
+      <MissingRatesWarning missingCurrencies={rptMissingRates} month={rptNow.getMonth() + 1} year={rptNow.getFullYear()} />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-2">

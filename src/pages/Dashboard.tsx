@@ -3,7 +3,8 @@ import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { loadConversionRates, toEur, fmtEur, fmtEurFull } from "@/lib/currency";
+import { loadConversionRates, toEur, fmtEur, fmtEurFull, getMissingRates } from "@/lib/currency";
+import { MissingRatesWarning } from "@/components/MissingRatesWarning";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,7 +111,18 @@ export default function Dashboard() {
     },
   });
 
-  // ── computed metrics ──
+  // Detect missing conversion rates for current month
+  const now2 = new Date();
+  const dashMissingRates = useMemo(() => {
+    const usedCurrencies = [
+      ...new Set([
+        ...timeEntries.map((t: any) => t.currency),
+        ...expenseEntries.map((e: any) => e.currency),
+      ]),
+    ].filter(Boolean);
+    return getMissingRates(usedCurrencies, now2.getFullYear(), now2.getMonth() + 1);
+  }, [timeEntries, expenseEntries]);
+
   const metrics = useMemo(() => {
     const { from, to } = getPeriodRange(period);
 
@@ -247,6 +259,8 @@ export default function Dashboard() {
           </TabsList>
         </Tabs>
       </div>
+
+      <MissingRatesWarning missingCurrencies={dashMissingRates} month={now2.getMonth() + 1} year={now2.getFullYear()} />
 
       {/* ── Row 1: Financial KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

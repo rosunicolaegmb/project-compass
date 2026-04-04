@@ -557,6 +557,18 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                                 placeholder="%"
                               />
                               <span className="text-xs text-muted-foreground">%</span>
+                              <div className="flex items-center gap-1.5">
+                                <Checkbox
+                                  checked={alloc.is_primary}
+                                  onCheckedChange={(checked) => {
+                                    setAllocations(prev => prev.map((a, idx) => ({
+                                      ...a,
+                                      is_primary: idx === i ? !!checked : false,
+                                    })));
+                                  }}
+                                />
+                                <span className="text-xs text-muted-foreground">Primary</span>
+                              </div>
                               <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeAllocation(i)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>

@@ -301,6 +301,7 @@ export default function GeneralExpensesPage() {
                   <TableRow key={exp.id} className="border-border">
                     <TableCell>
                       <Input
+                        key={`desc-${exp.id}-${exp.description}`}
                         defaultValue={exp.description}
                         className="h-8 text-sm border-transparent hover:border-border focus:border-border bg-transparent"
                         onBlur={(e) => {

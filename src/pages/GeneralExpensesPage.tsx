@@ -215,7 +215,7 @@ export default function GeneralExpensesPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableSkeleton columns={3} rows={4} />
+              <TableSkeleton columns={4} rows={4} />
             ) : expenses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3}>

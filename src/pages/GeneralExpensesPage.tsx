@@ -51,6 +51,7 @@ export default function GeneralExpensesPage() {
       const { error } = await supabase.from("general_expenses").insert({
         description: newDesc.trim(),
         amount: parseFloat(newAmount) || 0,
+        currency: newCurrency,
         year,
         month,
       });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -52,6 +53,7 @@ interface Allocation {
   allocation_percentage: number;
   start_date: string;
   end_date: string;
+  is_primary: boolean;
   isNew?: boolean;
 }
 
@@ -103,7 +105,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
       if (!resource?.id) return [];
       const { data, error } = await supabase
         .from("project_members")
-        .select("id, project_id, allocation_percentage, start_date, end_date, projects(name, start_date, end_date)")
+        .select("id, project_id, allocation_percentage, start_date, end_date, is_primary, projects(name, start_date, end_date)")
         .eq("resource_id", resource.id);
       if (error) throw error;
       return data;
@@ -152,6 +154,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
           allocation_percentage: Number(a.allocation_percentage || 100),
           start_date: a.start_date || "",
           end_date: a.end_date || "",
+          is_primary: a.is_primary ?? false,
         }));
         // Avoid unnecessary state updates
         if (JSON.stringify(prev) === JSON.stringify(newAllocs)) return prev;
@@ -165,7 +168,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
 
   const addAllocation = () => {
     setAllocations(prev => [...prev, {
-      project_id: "", allocation_percentage: 100, start_date: "", end_date: "", isNew: true,
+      project_id: "", allocation_percentage: 100, start_date: "", end_date: "", is_primary: false, isNew: true,
     }]);
     setAllocOpen(true);
   };
@@ -287,6 +290,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
             allocation_percentage: alloc.allocation_percentage,
             start_date: alloc.start_date || null,
             end_date: alloc.end_date || null,
+            is_primary: alloc.is_primary,
           }).eq("id", alloc.id!);
           if (error) throw error;
         }
@@ -302,6 +306,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
             allocation_percentage: a.allocation_percentage,
             start_date: a.start_date || null,
             end_date: a.end_date || null,
+            is_primary: a.is_primary,
           }))
         );
         if (error) throw error;
@@ -552,6 +557,18 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                                 placeholder="%"
                               />
                               <span className="text-xs text-muted-foreground">%</span>
+                              <div className="flex items-center gap-1.5">
+                                <Checkbox
+                                  checked={alloc.is_primary}
+                                  onCheckedChange={(checked) => {
+                                    setAllocations(prev => prev.map((a, idx) => ({
+                                      ...a,
+                                      is_primary: idx === i ? !!checked : false,
+                                    })));
+                                  }}
+                                />
+                                <span className="text-xs text-muted-foreground">Primary</span>
+                              </div>
                               <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeAllocation(i)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>

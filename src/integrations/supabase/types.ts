@@ -489,6 +489,7 @@ export type Database = {
           delivery_role_id: string | null
           end_date: string | null
           id: string
+          is_primary: boolean
           project_id: string
           resource_id: string
           start_date: string | null
@@ -503,6 +504,7 @@ export type Database = {
           delivery_role_id?: string | null
           end_date?: string | null
           id?: string
+          is_primary?: boolean
           project_id: string
           resource_id: string
           start_date?: string | null
@@ -517,6 +519,7 @@ export type Database = {
           delivery_role_id?: string | null
           end_date?: string | null
           id?: string
+          is_primary?: boolean
           project_id?: string
           resource_id?: string
           start_date?: string | null

@@ -168,7 +168,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
 
   const addAllocation = () => {
     setAllocations(prev => [...prev, {
-      project_id: "", allocation_percentage: 100, start_date: "", end_date: "", isNew: true,
+      project_id: "", allocation_percentage: 100, start_date: "", end_date: "", is_primary: false, isNew: true,
     }]);
     setAllocOpen(true);
   };

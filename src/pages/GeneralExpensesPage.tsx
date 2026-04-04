@@ -354,14 +354,22 @@ export default function GeneralExpensesPage() {
       />
 
       {/* Copy confirmation */}
-      <DeleteConfirmDialog
-        open={copyConfirm}
-        onOpenChange={setCopyConfirm}
-        onConfirm={() => copyMutation.mutate()}
-        title="Copy from Previous Month"
-        description={`This will copy all expenses from ${prevMonthLabel} into ${MONTHS[month - 1]} ${year}. Existing entries will not be removed. Continue?`}
-        loading={copyMutation.isPending}
-      />
+      <AlertDialog open={copyConfirm} onOpenChange={setCopyConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Copy from Previous Month</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will copy all expenses from {prevMonthLabel} into {MONTHS[month - 1]} {year}. Existing entries will not be removed. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={copyMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending}>
+              {copyMutation.isPending ? "Copying..." : "Continue"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -26,7 +26,7 @@ export default function GeneralExpensesPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [newDesc, setNewDesc] = useState("");
   const [newAmount, setNewAmount] = useState("");
-  const [deleting, setDeleting] = useState<any>(null);
+  const [newCurrency, setNewCurrency] = useState("EUR");
   const [copyConfirm, setCopyConfirm] = useState(false);
 
   const { data: expenses = [], isLoading } = useQuery({

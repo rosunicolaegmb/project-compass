@@ -54,6 +54,7 @@ const App = () => (
               <Route path="/configure" element={<ProtectedRoute allowedRoles={["admin"]}><ConfigurePage /></ProtectedRoute>} />
               <Route path="/configure/conversion-rates" element={<ProtectedRoute allowedRoles={["admin"]}><ConversionRatesPage /></ProtectedRoute>} />
               <Route path="/configure/salaries" element={<ProtectedRoute allowedRoles={["admin"]}><SalariesPage /></ProtectedRoute>} />
+              <Route path="/configure/general-expenses" element={<ProtectedRoute allowedRoles={["admin"]}><GeneralExpensesPage /></ProtectedRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

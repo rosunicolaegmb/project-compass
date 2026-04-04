@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRightLeft, Wallet } from "lucide-react";
+import { ArrowRightLeft, Wallet, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const configItems = [
@@ -15,6 +15,12 @@ const configItems = [
     description: "Monthly cost amounts per resource",
     icon: Wallet,
     path: "/configure/salaries",
+  },
+  {
+    title: "General Expenses",
+    description: "Monthly overhead and general expenses tracking",
+    icon: Receipt,
+    path: "/configure/general-expenses",
   },
 ];
 

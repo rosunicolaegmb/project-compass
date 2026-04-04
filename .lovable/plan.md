@@ -1,34 +1,31 @@
 
 
-## Plan: Add Interactive Day Picker to Monthly Time Entry Dialog
+## Plan: Add "Delete All Selected" to Timesheets Bulk Actions
 
 ### What changes
 
-Replace the current automatic working-days calculation with an interactive month calendar where all working days are pre-selected but the user can toggle individual days on/off.
+Add a "Delete Selected" button next to the existing "Approve Selected" button in the bulk actions bar. It will soft-delete all selected time entries after a confirmation dialog.
 
 ### Implementation
 
-**File: `src/components/timesheets/MonthlyTimeEntryDialog.tsx`**
+**File: `src/pages/Timesheets.tsx`**
 
-1. **Add `selectedDates` state** (`Date[]`) — initialized from `workingDays` whenever month or skip-weekends changes.
+1. **Add a bulk delete mutation** — similar to `bulkApproveMutation`, but sets `deleted_at` on all selected IDs using `.in("id", ids)`.
 
-2. **Add a `Calendar` component** (from `src/components/ui/calendar.tsx`) in `mode="multiple"` between the month picker and hours field:
-   - Shows the full month view
-   - Pre-selects all working days (weekdays if skip-weekends is on)
-   - User can click to deselect/reselect individual days
-   - Constrained to only the selected month (disable navigation, disable days outside month)
+2. **Add state for bulk delete confirmation** — `showBulkDelete` boolean to control a `DeleteConfirmDialog`.
 
-3. **Update `workingDays`** to be derived from `selectedDates` instead of the pure calculation — the calculated days become the *initial* selection, user toggles override it.
+3. **Add "Delete Selected" button** in the bulk actions bar (line ~331-339), styled as destructive variant, next to "Approve Selected".
 
-4. **Update `totalHours` and summary badge** to reflect `selectedDates.length` instead of `workingDays.length`.
+4. **Add `DeleteConfirmDialog`** for bulk delete — shows count of entries to be deleted, calls the bulk delete mutation on confirm, clears selection on success.
 
-5. **Update mutation** to use `selectedDates` for the dates array sent to Supabase.
+5. **Import `Trash2`** icon (already imported).
 
-6. **Sync logic**: When month or skip-weekends changes, reset `selectedDates` to the new computed working days. Add a "Select All / Deselect All" toggle above the calendar for convenience.
+### UI
 
-**File: `src/components/ui/calendar.tsx`**
-- Ensure `pointer-events-auto` class is present (per shadcn datepicker guidelines).
+The bulk actions bar will show:
+```text
+[12 selected] [✓ Approve Selected] [🗑 Delete Selected] [Deselect All]
+```
 
-### UI Layout
-The calendar will appear as an inline month grid (not in a popover) within the dialog, showing day numbers with selected days highlighted. Compact sizing to fit within the dialog's max-height.
+Clicking "Delete Selected" opens a confirmation dialog before executing.
 

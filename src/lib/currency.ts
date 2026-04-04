@@ -110,3 +110,13 @@ export function fmtCurrency(n: number | null | undefined, currency: Currency | s
 export function areRatesLoaded(): boolean {
   return rateCacheLoaded;
 }
+
+/**
+ * Check which currencies are missing rates for a given month.
+ * Returns array of currency codes that have no rate to EUR for that month.
+ */
+export function getMissingRates(currencies: string[], year: number, month: number): string[] {
+  return currencies
+    .filter((c) => c !== "EUR")
+    .filter((c) => rateCache[`${c}-${year}-${month}`] == null);
+}

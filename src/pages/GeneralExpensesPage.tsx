@@ -46,6 +46,19 @@ export default function GeneralExpensesPage() {
     },
   });
 
+  // Fetch conversion rates for this month to convert totals to EUR
+  const { data: conversionRates = [] } = useQuery({
+    queryKey: ["conversion-rates", year, month],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("currency_conversion_rates")
+        .select("from_currency, to_currency, rate")
+        .eq("year", year)
+        .eq("month", month);
+      if (error) throw error;
+      return data;
+    },
+  });
   const addMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("general_expenses").insert({
@@ -116,7 +129,17 @@ export default function GeneralExpensesPage() {
     onError: (err: Error) => { toast.error(err.message); setCopyConfirm(false); },
   });
 
-  const total = expenses.reduce((s: number, e: any) => s + Number(e.amount), 0);
+  const getEurRate = (currency: string): number => {
+    if (currency === "EUR") return 1;
+    const rate = conversionRates.find(
+      (r: any) => r.from_currency === currency && r.to_currency === "EUR"
+    );
+    return rate ? Number(rate.rate) : 1;
+  };
+
+  const totalEur = expenses.reduce((s: number, e: any) => {
+    return s + Number(e.amount) * getEurRate(e.currency);
+  }, 0);
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   const prevMonthLabel = (() => {
@@ -247,11 +270,11 @@ export default function GeneralExpensesPage() {
                   </TableRow>
                 ))}
                 <TableRow className="border-border bg-muted/30 font-medium">
-                  <TableCell>Total</TableCell>
+                  <TableCell>Total (EUR)</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    €{totalEur.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell />
+                  <TableCell className="text-muted-foreground text-sm">EUR</TableCell>
                   <TableCell />
                 </TableRow>
               </>

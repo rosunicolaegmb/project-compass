@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Search, Pencil, Trash2, UserCircle, Download, Mail, Copy, Check } from "lucide-react";
 import { exportToCsv } from "@/lib/csv-export";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import { toast } from "sonner";
 
 const EMPLOYMENT_LABELS: Record<string, string> = {
@@ -107,8 +108,14 @@ export default function Resources() {
       .filter(Boolean).some((v: string) => v.toLowerCase().includes(q));
   });
 
-  const fmtRate = (n: number | null | undefined) => n != null ? `$${Number(n).toLocaleString()}/hr` : "—";
-  const fmtMonthly = (n: number | null | undefined, currency = "$") => n != null ? `${currency}${Number(n).toLocaleString()}/mo` : "—";
+  const fmtRate = (n: number | null | undefined, cur: string = "EUR") => {
+    const sym = CURRENCY_SYMBOLS[cur as Currency] || cur;
+    return n != null ? `${sym}${Number(n).toLocaleString()}/hr` : "—";
+  };
+  const fmtMonthly = (n: number | null | undefined, cur: string = "EUR") => {
+    const sym = CURRENCY_SYMBOLS[cur as Currency] || cur;
+    return n != null ? `${sym}${Number(n).toLocaleString()}/mo` : "—";
+  };
 
   const getInvitationStatus = (r: any): "active" | "not_invited" | "invitation_sent" | "archived" => {
     if (!r.is_active) return "archived";
@@ -211,10 +218,10 @@ export default function Resources() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {r.employment_type === "full_time" ? fmtMonthly(r.monthly_cost) : fmtRate(r.default_cost_rate)}
+                    {r.employment_type === "full_time" ? fmtMonthly(r.monthly_cost, r.currency) : fmtRate(r.default_cost_rate, r.cost_rate_currency)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtRate(r.default_bill_rate)}</TableCell>
-                  <TableCell className="text-right tabular-nums hidden lg:table-cell">{fmtMonthly(r.overhead_cost_eur, "€")}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtRate(r.default_bill_rate, r.bill_rate_currency)}</TableCell>
+                  <TableCell className="text-right tabular-nums hidden lg:table-cell">{fmtMonthly(r.overhead_cost_eur, "EUR")}</TableCell>
                   <TableCell><StatusBadge status={getInvitationStatus(r)} /></TableCell>
                   {canEdit && (
                     <TableCell>

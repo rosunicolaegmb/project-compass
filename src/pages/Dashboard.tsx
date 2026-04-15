@@ -88,7 +88,7 @@ export default function Dashboard() {
     queryKey: ["dash-expenses"],
     queryFn: async () => {
       const { data, error } = await supabase.from("expense_entries")
-        .select("amount, project_id, expense_date, currency")
+        .select("amount, project_id, expense_date, currency, description, category")
         .is("deleted_at", null);
       if (error) throw error;
       return data;
@@ -221,9 +221,9 @@ export default function Dashboard() {
       }
     }
 
-    // Non-salary expenses (exclude "operational" salary allocations)
+    // Non-salary expenses (exclude salary allocations to prevent double-counting with resource_monthly_costs)
     const nonSalaryExpenses = filteredExpenses.filter((e: any) => {
-      // Keep all expenses — salary allocations from edge function are also valid costs
+      if (e.description && String(e.description).startsWith("Salary allocation")) return false;
       return true;
     });
 

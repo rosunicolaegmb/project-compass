@@ -381,7 +381,7 @@ export default function Reports() {
                   {budgetVsActualProject.map((p) => (
                     <TableRow key={p.name}>
                       <TableCell className="font-medium">{p.name}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs">{p.type === "fixed_price" ? "FP" : "T&M"}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{p.type === "fixed_price" ? "FP" : p.type === "support" ? "Support" : "T&M"}</Badge></TableCell>
                       <TableCell className="text-right">{fmt(p.budget)}</TableCell>
                       <TableCell className="text-right">{fmt(p.actualCost)}</TableCell>
                       <TableCell className="text-right">{fmt(p.actualRevenue)}</TableCell>

@@ -24,9 +24,11 @@ import {
 const fmt = fmtEur;
 const fmtFull = fmtEurFull;
 function fmtPct(n: number): string { return `${n.toFixed(1)}%`; }
-function fmtEurExact(n: number | null | undefined): string {
+function fmtEurPrecise(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "—";
-  return `€${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (Math.abs(n) >= 1_000_000) return `€${(n / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(n) >= 1_000) return `€${(n / 1_000).toFixed(2)}K`;
+  return `€${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
 const tooltipStyle = {

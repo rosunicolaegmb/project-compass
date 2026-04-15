@@ -782,6 +782,7 @@ export type Database = {
           currency: string
           id: string
           month: number
+          overhead: number
           resource_id: string
           updated_at: string
           year: number
@@ -792,6 +793,7 @@ export type Database = {
           currency?: string
           id?: string
           month: number
+          overhead?: number
           resource_id: string
           updated_at?: string
           year: number
@@ -802,6 +804,7 @@ export type Database = {
           currency?: string
           id?: string
           month?: number
+          overhead?: number
           resource_id?: string
           updated_at?: string
           year?: number

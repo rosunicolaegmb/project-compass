@@ -137,6 +137,16 @@ export default function Dashboard() {
     },
   });
 
+  const { data: oneTimeRevenues = [] } = useQuery({
+    queryKey: ["dash-one-time-revenues"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("one_time_revenues")
+        .select("project_id, revenue_month, amount, currency");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Detect missing conversion rates for current month
   const now2 = new Date();
   const dashMissingRates = useMemo(() => {

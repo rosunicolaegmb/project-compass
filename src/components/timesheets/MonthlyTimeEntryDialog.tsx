@@ -53,6 +53,7 @@ interface MonthlyTimeEntryDialogProps {
   projects: any[];
   phases: any[];
   reporterResourceId?: string | null;
+  projectMembers?: { project_id: string; resource_id: string }[];
 }
 
 function computeWorkingDays(month: string, skipWeekends: boolean): Date[] {
@@ -71,7 +72,7 @@ function computeWorkingDays(month: string, skipWeekends: boolean): Date[] {
   }
 }
 
-export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects, phases, reporterResourceId }: MonthlyTimeEntryDialogProps) {
+export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects, phases, reporterResourceId, projectMembers = [] }: MonthlyTimeEntryDialogProps) {
   const queryClient = useQueryClient();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
 
@@ -104,6 +105,14 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   const watchCurrency = form.watch("currency");
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
   const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
+
+  // Filter resources by project allocation
+  const filteredResources = useMemo(() => {
+    if (!watchProjectId) return resources;
+    const allocatedIds = projectMembers.filter(m => m.project_id === watchProjectId).map(m => m.resource_id);
+    if (allocatedIds.length === 0) return resources;
+    return resources.filter((r: any) => allocatedIds.includes(r.id));
+  }, [watchProjectId, projectMembers, resources]);
 
   // Recompute default selection when month or skip_weekends changes
   useEffect(() => {
@@ -231,14 +240,14 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
-            <FormField control={form.control} name="resource_id" render={({ field }) => (
+            <FormField control={form.control} name="project_id" render={({ field }) => (
               <FormItem>
-                <FormLabel>Resource *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={!!reporterResourceId}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select resource" /></SelectTrigger></FormControl>
+                <FormLabel>Project *</FormLabel>
+                <Select onValueChange={(v) => { field.onChange(v); form.setValue("phase_id", ""); form.setValue("resource_id", reporterResourceId || ""); }} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {resources.map((r: any) => (
-                      <SelectItem key={r.id} value={r.id}>{r.display_name}</SelectItem>
+                    {projects.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -246,14 +255,14 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="project_id" render={({ field }) => (
+            <FormField control={form.control} name="resource_id" render={({ field }) => (
               <FormItem>
-                <FormLabel>Project *</FormLabel>
-                <Select onValueChange={(v) => { field.onChange(v); form.setValue("phase_id", ""); }} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger></FormControl>
+                <FormLabel>Resource *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={!!reporterResourceId}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select resource" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {projects.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    {filteredResources.map((r: any) => (
+                      <SelectItem key={r.id} value={r.id}>{r.display_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

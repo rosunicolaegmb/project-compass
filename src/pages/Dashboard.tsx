@@ -263,11 +263,9 @@ export default function Dashboard() {
       <MissingRatesWarning missingCurrencies={dashMissingRates} month={now2.getMonth() + 1} year={now2.getFullYear()} />
 
       {/* ── Row 1: Financial KPIs ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <KpiCard label="Planned Budget" value={fmt(metrics.totalPlannedBudget)} icon={Target} />
-        <KpiCard label="Actual Cost" value={fmt(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalPlannedBudget > 0 ? (metrics.totalActualCost / metrics.totalPlannedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
-        <KpiCard label="Forecast Cost" value={fmt(metrics.totalForecastCost)} icon={BarChart3} />
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <KpiCard label="Projected Revenue" value={fmt(metrics.totalForecastRevenue)} icon={TrendingUp} accent="bg-success/10" />
+        <KpiCard label="Actual Cost" value={fmt(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalPlannedBudget > 0 ? (metrics.totalActualCost / metrics.totalPlannedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
         <KpiCard label="Gross Margin" value={fmtPct(metrics.grossMargin)} icon={Percent} accent={metrics.grossMargin < 15 ? "bg-destructive/10" : "bg-success/10"} />
       </div>
 

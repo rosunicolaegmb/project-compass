@@ -1,45 +1,52 @@
 
 
-## Show Resource Costs on Dashboard
+## One-Time Revenue Feature
 
-### Root Causes
-1. **The dashboard ignores `resource_monthly_costs`** — it only calculates cost from `time_entries.cost_rate × hours` (which is now null) and `expense_entries.amount`.
-2. **"Run Allocation" was never clicked** for February — so no salary expense entries were created in `expense_entries`.
-3. **Dragos has zero time entries** for Feb, so the allocation edge function would skip him even if run.
+### Overview
+Add a "One-Time Revenue" button to the Timesheets page that lets users record ad-hoc revenue entries for a project. These entries are stored in a new dedicated table and automatically included in Dashboard KPIs and Project Detail revenue calculations.
 
-### Solution
+### Database
+Create a new `one_time_revenues` table:
+- `id` (uuid, PK)
+- `project_id` (uuid, NOT NULL)
+- `revenue_month` (date, NOT NULL) — first of the month
+- `amount` (numeric, NOT NULL)
+- `currency` (text, NOT NULL, default 'EUR')
+- `reason` (text)
+- `created_at`, `updated_at` (timestamps)
 
-Two-part fix to make salary costs flow to the dashboard automatically:
+RLS: Admins and office admins can CRUD. Authenticated can SELECT.
 
-**Part 1: Dashboard reads `resource_monthly_costs` directly**
+### UI Changes
 
-Add a new query in `Dashboard.tsx` to fetch `resource_monthly_costs`. For each resource-month, convert the amount to EUR using `toEur()`, then allocate it proportionally across projects using `project_members` allocation percentages (same logic as the edge function, but read-only for display).
+**1. `src/pages/Timesheets.tsx`**
+- Add a "One-Time Revenue" button next to "Log Month" / "Log Time"
+- Add state for dialog open/close
+- Render the new dialog component
 
-This means the dashboard shows salary costs immediately after saving — no need to run allocation first.
+**2. New `src/components/timesheets/OneTimeRevenueDialog.tsx`**
+- Dialog form with fields:
+  - Project (select from projects list)
+  - Month picker (month/year selector)
+  - Amount (number input) + Currency selector (EUR/RON/GBP)
+  - Reason (textarea)
+- On save: insert into `one_time_revenues`, invalidate queries, show toast
 
-**Part 2: Fix the cost calculation**
+**3. `src/pages/Dashboard.tsx`**
+- Fetch `one_time_revenues`, filter by period range
+- Convert amounts to EUR using `toEur()`
+- Add to `totalActualRevenue` alongside the existing time-entry-based revenue
 
-The current `totalActualCost` sums `hours × cost_rate` from time entries, but `cost_rate` is now always null. Update the cost calculation to:
-- Use `resource_monthly_costs` as the primary source of labor cost (salary + overhead)
-- Keep expense entries as a secondary cost source (non-salary expenses)
-- Stop relying on `time_entries.cost_rate` for cost (it's effectively deprecated)
+**4. `src/pages/ProjectDetail.tsx`**
+- Fetch `one_time_revenues` for that project
+- Display them in the revenue section as line items
+- Include in project revenue totals
+
+### Files to create
+- `src/components/timesheets/OneTimeRevenueDialog.tsx`
 
 ### Files to edit
-- `src/pages/Dashboard.tsx` — add query for `resource_monthly_costs` and `project_members`, rewrite cost calculation in the `metrics` useMemo
-
-### Technical detail
-
-```text
-New cost calculation:
-  Labor Cost = Σ (resource_monthly_costs.amount + overhead) converted to EUR
-               allocated per project via project_members.allocation_percentage
-  Expense Cost = Σ expense_entries.amount (non-salary) converted to EUR
-  Total Actual Cost = Labor Cost + Expense Cost
-```
-
-The dashboard will fetch:
-- `resource_monthly_costs` (filtered by period range months)
-- `project_members` (to map resources → projects with allocation %)
-
-For each resource-month cost, distribute to projects using the same allocation logic as the edge function. This gives immediate visibility without requiring the allocation step.
+- `src/pages/Timesheets.tsx` — add button + dialog state
+- `src/pages/Dashboard.tsx` — fetch and include one-time revenues in metrics
+- `src/pages/ProjectDetail.tsx` — show one-time revenues in project detail
 

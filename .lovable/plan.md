@@ -1,29 +1,31 @@
 
 
-## Fix: Timezone Bug in Dashboard Period Filtering
+## Reorder Project/Resource Fields and Filter Resources by Project Allocation
 
-### Root Cause
-`getPeriodRange()` converts dates using `toISOString().substring(0, 10)`, which shifts to UTC. In timezones east of UTC (e.g. Romania UTC+2), `new Date(2026, 3, 1)` (April 1 local) becomes `"2026-03-31"` in UTC. This causes the last day of the previous month to leak into the current month's view.
+### What changes
+In both `TimeEntryFormDialog` and `MonthlyTimeEntryDialog`:
+1. Move the **Project** dropdown above the **Resource** dropdown
+2. When a project is selected, filter the Resource dropdown to only show resources allocated to that project (via `project_members` table)
+3. Clear the resource selection when the project changes (since the previous resource may not be allocated)
 
-This explains exactly what you see in April:
-- **€660 revenue** = one leaked March 31 time entry (8h × €52.50 + 8h × €30)
-- **€14.88K cost** = all March salary costs leak in because the monthly costs date comparison also uses `new Date()` with UTC shifting
+### How
 
-### Fix
+**1. Fetch `project_members` in `src/pages/Timesheets.tsx`**
+- Add a new query: `supabase.from("project_members").select("project_id, resource_id")` 
+- Pass the resulting array as a new `projectMembers` prop to both `TimeEntryFormDialog` and `MonthlyTimeEntryDialog`
 
-**File: `src/pages/Dashboard.tsx`**
+**2. Update `src/components/timesheets/TimeEntryFormDialog.tsx`**
+- Add `projectMembers` to props interface
+- Swap the Project and Resource `FormField` blocks in the JSX (Project first, Resource second)
+- Compute `filteredResources`: when a project is selected, filter `resources` to only those whose `id` appears in `projectMembers` for that project. If no project selected, show all.
+- When project changes, reset `resource_id` to `""` (and also reset `phase_id` as it already does)
+- Auto-fill rate logic: keep the existing resource-change effect, it will still work after reorder
 
-1. Replace `toISOString().substring(0, 10)` in `getPeriodRange` with a local date formatter:
-```typescript
-function toLocalDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
-```
+**3. Update `src/components/timesheets/MonthlyTimeEntryDialog.tsx`**
+- Same changes as above: add `projectMembers` prop, swap field order, filter resources by project allocation, reset resource on project change
 
-2. Update `getPeriodRange` to use `toLocalDate()` instead of `toISOString().substring(0, 10)`.
-
-3. Also fix the quarterly and yearly `to = now` case — `now` also needs local formatting.
-
-### Scope
-Single file change: `src/pages/Dashboard.tsx`, ~5 lines modified.
+### Files to edit
+- `src/pages/Timesheets.tsx` — add project_members query, pass as prop
+- `src/components/timesheets/TimeEntryFormDialog.tsx` — reorder fields, filter resources
+- `src/components/timesheets/MonthlyTimeEntryDialog.tsx` — reorder fields, filter resources
 

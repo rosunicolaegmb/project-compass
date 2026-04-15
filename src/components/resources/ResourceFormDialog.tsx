@@ -550,7 +550,7 @@ export function ResourceFormDialog({ open, onOpenChange, resource, deliveryRoles
                                 </SelectContent>
                               </Select>
                               <Input
-                                type="number" min="0" max="100" step="5"
+                                type="number" min="0" step="5"
                                 value={alloc.allocation_percentage}
                                 onChange={(e) => updateAllocation(i, "allocation_percentage", Number(e.target.value))}
                                 className="w-20 h-8 text-sm text-right"

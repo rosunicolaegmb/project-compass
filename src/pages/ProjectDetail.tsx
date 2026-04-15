@@ -397,6 +397,7 @@ export default function ProjectDetail() {
           <TabsTrigger value="phases">Phases ({phases.length})</TabsTrigger>
           <TabsTrigger value="team">Team ({members.length})</TabsTrigger>
           <TabsTrigger value="timesheets">Timesheets ({timeEntries.length})</TabsTrigger>
+          <TabsTrigger value="revenue">Revenue ({oneTimeRevenues.length})</TabsTrigger>
           <TabsTrigger value="expenses">Expenses ({expenses.length})</TabsTrigger>
           <TabsTrigger value="budget">Budget History</TabsTrigger>
           <TabsTrigger value="forecasts">Forecasts</TabsTrigger>

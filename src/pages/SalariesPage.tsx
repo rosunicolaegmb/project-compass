@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Wallet, Save, Loader2, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Wallet, Save, Loader2, Info, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +28,8 @@ export default function SalariesPage() {
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [overheads, setOverheads] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [allocating, setAllocating] = useState(false);
+  const [allocationResult, setAllocationResult] = useState<string | null>(null);
 
   // Fetch active resources
   const { data: resources = [] } = useQuery({
@@ -187,6 +190,24 @@ export default function SalariesPage() {
     setSaving(false);
   };
 
+  const handleAllocate = async () => {
+    setAllocating(true);
+    setAllocationResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("allocate-monthly-costs", {
+        body: { year: Number(selectedYear), month: Number(selectedMonth) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const msg = data?.message || `Allocated ${data?.allocated || 0} entries`;
+      setAllocationResult(msg);
+      toast.success(msg);
+    } catch (err: any) {
+      toast.error("Allocation failed: " + (err.message || "Unknown error"));
+    }
+    setAllocating(false);
+  };
+
   const monthLabel = `${MONTHS[Number(selectedMonth) - 1]} ${selectedYear}`;
 
   return (
@@ -301,8 +322,18 @@ export default function SalariesPage() {
                 })}
               </div>
               <Separator className="my-6" />
-              <div className="flex justify-end">
-                <Button onClick={handleSave} disabled={saving}>
+              {allocationResult && (
+                <Alert className="mb-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>{allocationResult}</AlertDescription>
+                </Alert>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleAllocate} disabled={allocating || saving}>
+                  {allocating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                  Run Allocation for {monthLabel}
+                </Button>
+                <Button onClick={handleSave} disabled={saving || allocating}>
                   {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                   Save for {monthLabel}
                 </Button>

@@ -569,17 +569,79 @@ export default function Timesheets() {
             </Table>
           </div>
         </TabsContent>
+
+        {/* ONE-TIME REVENUES */}
+        <TabsContent value="revenues">
+          <div className="rounded-lg border bg-card overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead>Project</TableHead>
+                  <TableHead>Month</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Currency</TableHead>
+                  <TableHead>Reason</TableHead>
+                  {canEdit && <TableHead className="w-20">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {otrLoading ? (
+                  <TableSkeleton columns={canEdit ? 6 : 5} rows={4} />
+                ) : otrList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={canEdit ? 6 : 5}>
+                      <EmptyState icon={Banknote} title="No one-time revenues" description="Record your first one-time revenue entry." />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  otrList.map((r: any) => (
+                    <TableRow key={r.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-medium">{(r.projects as any)?.name || "—"}</TableCell>
+                      <TableCell>{r.revenue_month?.substring(0, 7)}</TableCell>
+                      <TableCell className="text-right font-medium">{Number(r.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell>{r.currency}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[200px] truncate">{r.reason || "—"}</TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingOtr(r)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletingOtr(r)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
       </Tabs>
 
       <TimeEntryFormDialog open={showCreate} onOpenChange={setShowCreate} entry={null} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <TimeEntryFormDialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} entry={editing} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <MonthlyTimeEntryDialog open={showMonthly} onOpenChange={setShowMonthly} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <OneTimeRevenueDialog open={showOneTimeRevenue} onOpenChange={setShowOneTimeRevenue} />
+      <OneTimeRevenueDialog
+        open={!!editingOtr}
+        onOpenChange={(o) => { if (!o) setEditingOtr(null); }}
+        editData={editingOtr}
+      />
       <DeleteConfirmDialog
         open={!!deleting} onOpenChange={(o) => { if (!o) setDeleting(null); }}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
         title="Delete Time Entry" description="Are you sure you want to delete this time entry?"
         loading={deleteMutation.isPending}
+      />
+      <DeleteConfirmDialog
+        open={!!deletingOtr} onOpenChange={(o) => { if (!o) setDeletingOtr(null); }}
+        onConfirm={() => deletingOtr && deleteOtrMutation.mutate(deletingOtr.id)}
+        title="Delete Revenue Entry" description="Are you sure you want to delete this one-time revenue entry?"
+        loading={deleteOtrMutation.isPending}
       />
     </div>
   );

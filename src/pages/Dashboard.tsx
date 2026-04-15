@@ -117,6 +117,26 @@ export default function Dashboard() {
     },
   });
 
+  const { data: monthlyCosts = [] } = useQuery({
+    queryKey: ["dash-monthly-costs"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("resource_monthly_costs")
+        .select("resource_id, year, month, amount, overhead, currency");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: projectMembers = [] } = useQuery({
+    queryKey: ["dash-project-members"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("project_members")
+        .select("resource_id, project_id, allocation_percentage, is_primary, start_date, end_date");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Detect missing conversion rates for current month
   const now2 = new Date();
   const dashMissingRates = useMemo(() => {

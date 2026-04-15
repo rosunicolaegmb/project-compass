@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { loadConversionRates, toEur, fmtEur, fmtEurFull, getMissingRates } from 
 import { MissingRatesWarning } from "@/components/MissingRatesWarning";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -38,26 +39,35 @@ const tooltipStyle = {
 
 type Period = "monthly" | "quarterly" | "yearly";
 
-function getPeriodRange(period: Period): { from: string; to: string } {
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function getPeriodRange(period: Period, selectedMonth: number, selectedYear: number): { from: string; to: string } {
   const now = new Date();
   let from: Date;
+  let to: Date;
   if (period === "monthly") {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    from = new Date(selectedYear, selectedMonth, 1);
+    to = new Date(selectedYear, selectedMonth + 1, 0); // last day of selected month
   } else if (period === "quarterly") {
     const q = Math.floor(now.getMonth() / 3) * 3;
     from = new Date(now.getFullYear(), q, 1);
+    to = now;
   } else {
     from = new Date(now.getFullYear(), 0, 1);
+    to = now;
   }
   return {
     from: from.toISOString().substring(0, 10),
-    to: now.toISOString().substring(0, 10),
+    to: to.toISOString().substring(0, 10),
   };
 }
 
 export default function Dashboard() {
   const { isReporter } = useAuth();
-  const [period, setPeriod] = useState<Period>("yearly");
+  const now = new Date();
+  const [period, setPeriod] = useState<Period>("monthly");
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-based
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   // Load conversion rates
   useEffect(() => { loadConversionRates(); }, []);
@@ -160,7 +170,7 @@ export default function Dashboard() {
   }, [timeEntries, expenseEntries]);
 
   const metrics = useMemo(() => {
-    const { from, to } = getPeriodRange(period);
+    const { from, to } = getPeriodRange(period, selectedMonth, selectedYear);
     const fromDate = new Date(from);
     const toDate = new Date(to);
 
@@ -350,7 +360,7 @@ export default function Dashboard() {
       overBudgetProjects, atRiskProjects, missingTimesheets,
       top10Revenue, top10Erosion, monthlyTrends, portfolioSplit,
     };
-  }, [projects, timeEntries, expenseEntries, forecasts, phases, period, monthlyCosts, projectMembers, oneTimeRevenues]);
+  }, [projects, timeEntries, expenseEntries, forecasts, phases, period, selectedMonth, selectedYear, monthlyCosts, projectMembers, oneTimeRevenues]);
 
   // ── KPI card component ──
   const KpiCard = ({ label, value, sub, icon: Icon, accent }: {
@@ -379,13 +389,35 @@ export default function Dashboard() {
     <div className="page-container">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <PageHeader title="Executive Dashboard" description="Portfolio-level financial performance and health indicators" />
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)} className="shrink-0">
-          <TabsList>
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
-            <TabsTrigger value="yearly">Yearly</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-2 shrink-0">
+          {period === "monthly" && (
+            <>
+              <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MONTH_NAMES.map((m, i) => (
+                    <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+                <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <TabsList>
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+              <TabsTrigger value="yearly">Yearly</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       <MissingRatesWarning missingCurrencies={dashMissingRates} month={now2.getMonth() + 1} year={now2.getFullYear()} />

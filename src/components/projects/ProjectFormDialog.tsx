@@ -176,6 +176,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, clients, resour
                 <SelectContent>
                   <SelectItem value="time_and_materials">T&M</SelectItem>
                   <SelectItem value="fixed_price">Fixed Price</SelectItem>
+                  <SelectItem value="support">Support</SelectItem>
                 </SelectContent>
               </Select>
             </div>

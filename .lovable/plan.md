@@ -1,52 +1,27 @@
 
 
-## One-Time Revenue Feature
+## Add One-Time Revenue Management Table
 
-### Overview
-Add a "One-Time Revenue" button to the Timesheets page that lets users record ad-hoc revenue entries for a project. These entries are stored in a new dedicated table and automatically included in Dashboard KPIs and Project Detail revenue calculations.
+### What
+Add a new tab or section in the Timesheets page that lists all one-time revenue records in a table, with edit and delete capabilities.
 
-### Database
-Create a new `one_time_revenues` table:
-- `id` (uuid, PK)
-- `project_id` (uuid, NOT NULL)
-- `revenue_month` (date, NOT NULL) — first of the month
-- `amount` (numeric, NOT NULL)
-- `currency` (text, NOT NULL, default 'EUR')
-- `reason` (text)
-- `created_at`, `updated_at` (timestamps)
-
-RLS: Admins and office admins can CRUD. Authenticated can SELECT.
-
-### UI Changes
+### Implementation
 
 **1. `src/pages/Timesheets.tsx`**
-- Add a "One-Time Revenue" button next to "Log Month" / "Log Time"
-- Add state for dialog open/close
-- Render the new dialog component
+- Add a new query to fetch all `one_time_revenues` joined with project names
+- Add a new tab "One-Time Revenues" to the existing Tabs component
+- Render a table with columns: Project, Month, Amount, Currency, Reason, Actions (edit/delete)
+- Add edit button that opens `OneTimeRevenueDialog` pre-filled with existing data
+- Add delete button with `DeleteConfirmDialog` confirmation
+- Add delete mutation and edit mutation
 
-**2. New `src/components/timesheets/OneTimeRevenueDialog.tsx`**
-- Dialog form with fields:
-  - Project (select from projects list)
-  - Month picker (month/year selector)
-  - Amount (number input) + Currency selector (EUR/RON/GBP)
-  - Reason (textarea)
-- On save: insert into `one_time_revenues`, invalidate queries, show toast
-
-**3. `src/pages/Dashboard.tsx`**
-- Fetch `one_time_revenues`, filter by period range
-- Convert amounts to EUR using `toEur()`
-- Add to `totalActualRevenue` alongside the existing time-entry-based revenue
-
-**4. `src/pages/ProjectDetail.tsx`**
-- Fetch `one_time_revenues` for that project
-- Display them in the revenue section as line items
-- Include in project revenue totals
-
-### Files to create
-- `src/components/timesheets/OneTimeRevenueDialog.tsx`
+**2. `src/components/timesheets/OneTimeRevenueDialog.tsx`**
+- Accept an optional `editData` prop with existing revenue record
+- Pre-fill form fields when editing
+- Use upsert or update instead of insert when editing
+- Reset form on close
 
 ### Files to edit
-- `src/pages/Timesheets.tsx` — add button + dialog state
-- `src/pages/Dashboard.tsx` — fetch and include one-time revenues in metrics
-- `src/pages/ProjectDetail.tsx` — show one-time revenues in project detail
+- `src/components/timesheets/OneTimeRevenueDialog.tsx` — add edit mode support
+- `src/pages/Timesheets.tsx` — add revenues tab with table, edit/delete actions
 

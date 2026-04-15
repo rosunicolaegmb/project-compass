@@ -190,7 +190,24 @@ export default function ProjectDetail() {
     enabled: !!id,
   });
 
-  const deletePhase = useMutation({
+  // Fetch one-time revenues
+  const { data: oneTimeRevenues = [] } = useQuery({
+    queryKey: ["project-one-time-revenues", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("one_time_revenues")
+        .select("*")
+        .eq("project_id", id!)
+        .order("revenue_month", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const oneTimeRevenueTotal = oneTimeRevenues.reduce((s: number, r: any) =>
+    s + toEur(Number(r.amount || 0), r.currency || "EUR", r.revenue_month), 0);
+
     mutationFn: async (phaseId: string) => {
       const { error } = await supabase
         .from("project_phases")

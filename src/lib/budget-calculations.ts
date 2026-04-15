@@ -7,7 +7,7 @@
  */
 
 // ---------- types ----------
-export type ProjectType = "time_and_materials" | "fixed_price";
+export type ProjectType = "time_and_materials" | "fixed_price" | "support";
 export type HealthStatus = "green" | "amber" | "red";
 
 export interface BudgetInputs {

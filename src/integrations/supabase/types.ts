@@ -1237,7 +1237,7 @@ export type Database = {
         | "archived"
         | "cancelled"
         | "sow_expired"
-      project_type: "time_and_materials" | "fixed_price"
+      project_type: "time_and_materials" | "fixed_price" | "support"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1391,7 +1391,7 @@ export const Constants = {
         "cancelled",
         "sow_expired",
       ],
-      project_type: ["time_and_materials", "fixed_price"],
+      project_type: ["time_and_materials", "fixed_price", "support"],
     },
   },
 } as const

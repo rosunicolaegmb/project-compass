@@ -22,6 +22,7 @@ import { toast } from "sonner";
 const PROJECT_TYPE_LABELS: Record<string, string> = {
   time_and_materials: "T&M",
   fixed_price: "Fixed Price",
+  support: "Support",
 };
 const STATUS_OPTIONS = ["draft", "active", "on_hold", "completed", "archived", "cancelled"];
 const PAGE_KEY = "projects";
@@ -161,6 +162,7 @@ export default function Projects() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="time_and_materials">T&M</SelectItem>
             <SelectItem value="fixed_price">Fixed Price</SelectItem>
+            <SelectItem value="support">Support</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>

@@ -1,28 +1,30 @@
 
 
-## Add "Missing Timesheet" alert for past months
+## Replace Cost Rate with Daily Rate in Timesheet Forms
 
-### Problem
-The current alert logic has no check for resources that are allocated to projects but have **zero timesheet entries** for completed past months. Dragos, Claudiu, and David all have allocations starting Feb 16, but only Claudiu logged time in Feb — and nobody logged time for March.
+### Changes
 
-### Solution
-Add alert #11: **"Missing Timesheet"** — for each active resource with a project allocation in a past month, check if they have any `time_entries` for that month. If not, raise a warning.
+Both `TimeEntryFormDialog.tsx` and `MonthlyTimeEntryDialog.tsx` will be updated identically:
 
-### Logic
-```text
-For each active resource:
-  For each past month (from their earliest allocation start_date to last completed month):
-    If resource had an active allocation that month AND zero time entries → alert
-```
+1. **Remove Cost Rate field** from the form UI (keep `cost_rate` in the schema/payload so existing DB column still gets a value — set it to `null` or `0` on submit)
 
-- Only check **completed months** (not the current month, which is still in progress)
-- Only check months where the resource had an **active project allocation**
-- Severity: **warning**
-- Message example: `"Dragos Filastacheanu has no timesheet entries for 2026-03"`
+2. **Add Daily Rate field** alongside Bill Rate (hr). New field `daily_rate` added to the form schema (not stored in DB — it's a UI-only computed field)
 
-### File changes
-- **Edit**: `src/pages/Alerts.tsx` — add the new check inside `generateAlerts()`, after the existing 10 checks
+3. **Auto-conversion logic** (8 hours/day):
+   - When user types a **Bill Rate** → `Daily Rate = Bill Rate × 8`
+   - When user types a **Daily Rate** → `Bill Rate = Daily Rate / 8`
+   - Use a flag to track which field the user is currently editing to avoid infinite loops
 
-### Technical detail
-The check iterates active resources, determines which past months they were allocated (using `project_members.start_date` / `end_date`), then checks if `time_entries` contains any rows for that resource+month. No new queries needed — all data is already fetched.
+4. **Auto-fill from resource**: When resource changes, set `bill_rate` from resource defaults and compute `daily_rate = bill_rate × 8`. No longer auto-fill `cost_rate`.
+
+### UI Layout
+The rate section becomes two fields side by side:
+- **Bill Rate ({sym}/hr)**
+- **Daily Rate ({sym}/day)**
+
+Cost Rate is hidden from the UI. The `cost_rate` value in the DB payload will be set to `null`.
+
+### Files to edit
+- `src/components/timesheets/TimeEntryFormDialog.tsx`
+- `src/components/timesheets/MonthlyTimeEntryDialog.tsx`
 

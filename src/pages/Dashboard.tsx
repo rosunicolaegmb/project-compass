@@ -238,8 +238,21 @@ export default function Dashboard() {
     const totalExpenseCost = nonSalaryExpenses.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
     const totalActualCost = totalLaborCost + totalExpenseCost;
 
-    const totalActualRevenue = filteredTime.filter((t: any) => t.is_billable)
+    const totalTimeRevenue = filteredTime.filter((t: any) => t.is_billable)
       .reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+
+    // One-time revenues filtered by period
+    const filteredOneTimeRevenues = oneTimeRevenues.filter((r: any) => r.revenue_month >= from && r.revenue_month <= to);
+    const totalOneTimeRevenue = filteredOneTimeRevenues.reduce((s: number, r: any) => s + toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month), 0);
+
+    // One-time revenue per project
+    const oneTimeRevenueByProject: Record<string, number> = {};
+    filteredOneTimeRevenues.forEach((r: any) => {
+      const amt = toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month);
+      oneTimeRevenueByProject[r.project_id] = (oneTimeRevenueByProject[r.project_id] || 0) + amt;
+    });
+
+    const totalActualRevenue = totalTimeRevenue + totalOneTimeRevenue;
 
     // Forecast
     const totalForecastCost = forecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_cost || 0) + Number(f.forecast_expenses || 0), 0) || totalActualCost;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +21,8 @@ import {
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 
+const HOURS_PER_DAY = 8;
+
 const schema = z.object({
   resource_id: z.string().min(1, "Resource is required"),
   project_id: z.string().min(1, "Project is required"),
@@ -30,7 +32,7 @@ const schema = z.object({
   is_billable: z.boolean().default(true),
   description: z.string().max(500).optional(),
   bill_rate: z.coerce.number().min(0).optional(),
-  cost_rate: z.coerce.number().min(0).optional(),
+  daily_rate: z.coerce.number().min(0).optional(),
   currency: z.string().default("EUR"),
 });
 
@@ -54,7 +56,7 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
     resolver: zodResolver(schema),
     defaultValues: {
       resource_id: "", project_id: "", phase_id: "", entry_date: new Date().toISOString().split("T")[0],
-      hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
+      hours: 8, is_billable: true, description: "", bill_rate: 0, daily_rate: 0, currency: "EUR",
     },
   });
 
@@ -65,6 +67,7 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
 
   useEffect(() => {
     if (entry) {
+      const billRate = Number(entry.bill_rate || 0);
       form.reset({
         resource_id: entry.resource_id || "",
         project_id: entry.project_id || "",
@@ -73,15 +76,15 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
         hours: Number(entry.hours || 8),
         is_billable: entry.is_billable ?? true,
         description: entry.description || "",
-        bill_rate: Number(entry.bill_rate || 0),
-        cost_rate: Number(entry.cost_rate || 0),
+        bill_rate: billRate,
+        daily_rate: billRate * HOURS_PER_DAY,
         currency: entry.currency || "EUR",
       });
     } else {
       form.reset({
         resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         entry_date: new Date().toISOString().split("T")[0],
-        hours: 8, is_billable: true, description: "", bill_rate: 0, cost_rate: 0, currency: "EUR",
+        hours: 8, is_billable: true, description: "", bill_rate: 0, daily_rate: 0, currency: "EUR",
       });
     }
   }, [entry, form, open, reporterResourceId]);
@@ -92,12 +95,29 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
     if (watchResourceId && !isEditing) {
       const resource = resources.find((r: any) => r.id === watchResourceId);
       if (resource) {
-        form.setValue("bill_rate", Number(resource.default_bill_rate || 0));
-        form.setValue("cost_rate", Number(resource.default_cost_rate || 0));
+        const br = Number(resource.default_bill_rate || 0);
+        form.setValue("bill_rate", br);
+        form.setValue("daily_rate", br * HOURS_PER_DAY);
         form.setValue("currency", resource.currency || "EUR");
       }
     }
   }, [watchResourceId, resources, form, isEditing]);
+
+  const [rateEditSource, setRateEditSource] = useState<"bill" | "daily" | null>(null);
+  const watchBillRate = form.watch("bill_rate");
+  const watchDailyRate = form.watch("daily_rate");
+
+  useEffect(() => {
+    if (rateEditSource === "bill" && watchBillRate != null) {
+      form.setValue("daily_rate", Number((watchBillRate * HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchBillRate, rateEditSource, form]);
+
+  useEffect(() => {
+    if (rateEditSource === "daily" && watchDailyRate != null) {
+      form.setValue("bill_rate", Number((watchDailyRate / HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchDailyRate, rateEditSource, form]);
 
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
@@ -132,7 +152,7 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
         is_billable: values.is_billable,
         description: values.description || null,
         bill_rate: values.bill_rate || null,
-        cost_rate: values.cost_rate || null,
+        cost_rate: null,
         currency: values.currency,
       };
 
@@ -230,17 +250,25 @@ export function TimeEntryFormDialog({ open, onOpenChange, entry, resources, proj
               </FormItem>
             )} />
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="cost_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cost Rate ({sym}/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Bill Rate ({sym}/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field}
+                      onFocus={() => setRateEditSource("bill")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="daily_rate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Daily Rate ({sym}/day)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field}
+                      onFocus={() => setRateEditSource("daily")}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

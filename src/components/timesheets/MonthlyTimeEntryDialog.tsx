@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,6 +27,8 @@ import {
   startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse,
 } from "date-fns";
 
+const HOURS_PER_DAY = 8;
+
 const schema = z.object({
   resource_id: z.string().min(1, "Resource is required"),
   project_id: z.string().min(1, "Project is required"),
@@ -36,7 +38,7 @@ const schema = z.object({
   is_billable: z.boolean().default(true),
   description: z.string().max(500).optional(),
   bill_rate: z.coerce.number().min(0).optional(),
-  cost_rate: z.coerce.number().min(0).optional(),
+  daily_rate: z.coerce.number().min(0).optional(),
   currency: z.string().default("EUR"),
   skip_weekends: z.boolean().default(true),
   skip_existing: z.boolean().default(true),
@@ -79,7 +81,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       resource_id: "", project_id: "", phase_id: "",
       month: format(new Date(), "yyyy-MM"),
       hours: 8, is_billable: true, description: "",
-      bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
+      bill_rate: 0, daily_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
     },
   });
 
@@ -90,7 +92,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         resource_id: reporterResourceId || "", project_id: "", phase_id: "",
         month: defaultMonth,
         hours: 8, is_billable: true, description: "",
-        bill_rate: 0, cost_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
+        bill_rate: 0, daily_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
       });
       setSelectedDates(computeWorkingDays(defaultMonth, true));
     }
@@ -126,12 +128,29 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
     if (watchResourceId) {
       const resource = resources.find((r: any) => r.id === watchResourceId);
       if (resource) {
-        form.setValue("bill_rate", Number(resource.default_bill_rate || 0));
-        form.setValue("cost_rate", Number(resource.default_cost_rate || 0));
+        const br = Number(resource.default_bill_rate || 0);
+        form.setValue("bill_rate", br);
+        form.setValue("daily_rate", br * HOURS_PER_DAY);
         form.setValue("currency", resource.currency || "EUR");
       }
     }
   }, [watchResourceId, resources, form]);
+
+  const [rateEditSource, setRateEditSource] = useState<"bill" | "daily" | null>(null);
+  const watchBillRate = form.watch("bill_rate");
+  const watchDailyRate = form.watch("daily_rate");
+
+  useEffect(() => {
+    if (rateEditSource === "bill" && watchBillRate != null) {
+      form.setValue("daily_rate", Number((watchBillRate * HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchBillRate, rateEditSource, form]);
+
+  useEffect(() => {
+    if (rateEditSource === "daily" && watchDailyRate != null) {
+      form.setValue("bill_rate", Number((watchDailyRate / HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchDailyRate, rateEditSource, form]);
 
   const handleSelectAll = () => {
     setSelectedDates(computeWorkingDays(watchMonth, watchSkipWeekends));
@@ -180,7 +199,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
           is_billable: values.is_billable,
           description: values.description || null,
           bill_rate: values.bill_rate || null,
-          cost_rate: values.cost_rate || null,
+          cost_rate: null,
           currency: values.currency,
         }));
 
@@ -313,17 +332,25 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
             )} />
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="cost_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cost Rate ({sym}/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
               <FormField control={form.control} name="bill_rate" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Bill Rate ({sym}/hr)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field}
+                      onFocus={() => setRateEditSource("bill")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="daily_rate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Daily Rate ({sym}/day)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field}
+                      onFocus={() => setRateEditSource("daily")}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

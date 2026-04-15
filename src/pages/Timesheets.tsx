@@ -137,6 +137,16 @@ export default function Timesheets() {
     },
   });
 
+  // Fetch project members for resource filtering
+  const { data: projectMembers = [] } = useQuery({
+    queryKey: ["project-members-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("project_members").select("project_id, resource_id");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch one-time revenues
   const { data: otrList = [], isLoading: otrLoading } = useQuery({
     queryKey: ["otr-list"],
@@ -622,9 +632,9 @@ export default function Timesheets() {
         </TabsContent>
       </Tabs>
 
-      <TimeEntryFormDialog open={showCreate} onOpenChange={setShowCreate} entry={null} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
-      <TimeEntryFormDialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} entry={editing} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
-      <MonthlyTimeEntryDialog open={showMonthly} onOpenChange={setShowMonthly} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
+      <TimeEntryFormDialog open={showCreate} onOpenChange={setShowCreate} entry={null} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} projectMembers={projectMembers} />
+      <TimeEntryFormDialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} entry={editing} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} projectMembers={projectMembers} />
+      <MonthlyTimeEntryDialog open={showMonthly} onOpenChange={setShowMonthly} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} projectMembers={projectMembers} />
       <OneTimeRevenueDialog open={showOneTimeRevenue} onOpenChange={setShowOneTimeRevenue} />
       <OneTimeRevenueDialog
         open={!!editingOtr}

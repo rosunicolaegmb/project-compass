@@ -18,7 +18,7 @@ const projectSchema = z.object({
   client_id: z.string().uuid("Select a client"),
   name: z.string().trim().min(1, "Project name is required").max(200),
   code: z.string().trim().max(20).optional().or(z.literal("")),
-  project_type: z.enum(["time_and_materials", "fixed_price"]),
+  project_type: z.enum(["time_and_materials", "fixed_price", "support"]),
   status: z.enum(["draft", "active", "on_hold", "completed", "archived", "cancelled", "sow_expired"]),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
   start_date: z.string().optional().or(z.literal("")),

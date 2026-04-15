@@ -46,7 +46,7 @@ export default function Timesheets() {
   const canBulkEdit = isAdmin || isOfficeAdmin;
   const queryClient = useQueryClient();
 
-  const [view, setView] = useState<"daily" | "weekly">("daily");
+  const [view, setView] = useState<"daily" | "weekly" | "revenues">("daily");
   const saved = loadFilters("timesheets");
   const [search, setSearch] = useState(saved.search || "");
   const [filterResource, setFilterResource] = useState(saved.resource || "all");
@@ -59,6 +59,8 @@ export default function Timesheets() {
   const [showCreate, setShowCreate] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
   const [showOneTimeRevenue, setShowOneTimeRevenue] = useState(false);
+  const [editingOtr, setEditingOtr] = useState<any>(null);
+  const [deletingOtr, setDeletingOtr] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -133,6 +135,34 @@ export default function Timesheets() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch one-time revenues
+  const { data: otrList = [], isLoading: otrLoading } = useQuery({
+    queryKey: ["otr-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("one_time_revenues")
+        .select("*, projects(name)")
+        .order("revenue_month", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const deleteOtrMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("one_time_revenues").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["otr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["dash-one-time-revenues"] });
+      queryClient.invalidateQueries({ queryKey: ["project-one-time-revenues"] });
+      toast.success("Revenue entry deleted");
+      setDeletingOtr(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const deleteMutation = useMutation({
@@ -377,11 +407,12 @@ export default function Timesheets() {
         loading={bulkDeleteMutation.isPending}
       />
 
-      <Tabs value={view} onValueChange={(v) => setView(v as "daily" | "weekly")} className="space-y-4">
+      <Tabs value={view} onValueChange={(v) => setView(v as "daily" | "weekly" | "revenues")} className="space-y-4">
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="daily">Daily View</TabsTrigger>
             <TabsTrigger value="weekly">Weekly View</TabsTrigger>
+            <TabsTrigger value="revenues">One-Time Revenues</TabsTrigger>
           </TabsList>
 
           {view === "daily" ? (
@@ -538,17 +569,79 @@ export default function Timesheets() {
             </Table>
           </div>
         </TabsContent>
+
+        {/* ONE-TIME REVENUES */}
+        <TabsContent value="revenues">
+          <div className="rounded-lg border bg-card overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead>Project</TableHead>
+                  <TableHead>Month</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Currency</TableHead>
+                  <TableHead>Reason</TableHead>
+                  {canEdit && <TableHead className="w-20">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {otrLoading ? (
+                  <TableSkeleton columns={canEdit ? 6 : 5} rows={4} />
+                ) : otrList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={canEdit ? 6 : 5}>
+                      <EmptyState icon={Banknote} title="No one-time revenues" description="Record your first one-time revenue entry." />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  otrList.map((r: any) => (
+                    <TableRow key={r.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-medium">{(r.projects as any)?.name || "—"}</TableCell>
+                      <TableCell>{r.revenue_month?.substring(0, 7)}</TableCell>
+                      <TableCell className="text-right font-medium">{Number(r.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell>{r.currency}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[200px] truncate">{r.reason || "—"}</TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingOtr(r)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletingOtr(r)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
       </Tabs>
 
       <TimeEntryFormDialog open={showCreate} onOpenChange={setShowCreate} entry={null} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <TimeEntryFormDialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} entry={editing} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <MonthlyTimeEntryDialog open={showMonthly} onOpenChange={setShowMonthly} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <OneTimeRevenueDialog open={showOneTimeRevenue} onOpenChange={setShowOneTimeRevenue} />
+      <OneTimeRevenueDialog
+        open={!!editingOtr}
+        onOpenChange={(o) => { if (!o) setEditingOtr(null); }}
+        editData={editingOtr}
+      />
       <DeleteConfirmDialog
         open={!!deleting} onOpenChange={(o) => { if (!o) setDeleting(null); }}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
         title="Delete Time Entry" description="Are you sure you want to delete this time entry?"
         loading={deleteMutation.isPending}
+      />
+      <DeleteConfirmDialog
+        open={!!deletingOtr} onOpenChange={(o) => { if (!o) setDeletingOtr(null); }}
+        onConfirm={() => deletingOtr && deleteOtrMutation.mutate(deletingOtr.id)}
+        title="Delete Revenue Entry" description="Are you sure you want to delete this one-time revenue entry?"
+        loading={deleteOtrMutation.isPending}
       />
     </div>
   );

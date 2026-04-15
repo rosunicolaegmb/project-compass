@@ -28,6 +28,8 @@ export default function SalariesPage() {
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [overheads, setOverheads] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [allocating, setAllocating] = useState(false);
+  const [allocationResult, setAllocationResult] = useState<string | null>(null);
 
   // Fetch active resources
   const { data: resources = [] } = useQuery({

@@ -184,7 +184,7 @@ export default function Alerts() {
     <div className="page-container">
       <PageHeader title="Alerts" description="Actionable warnings and issues detected across the system" />
       {isLoading ? (
-        <TableSkeleton />
+        <TableSkeleton columns={4} />
       ) : alerts.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-30" />

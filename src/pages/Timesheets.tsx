@@ -46,7 +46,7 @@ export default function Timesheets() {
   const canBulkEdit = isAdmin || isOfficeAdmin;
   const queryClient = useQueryClient();
 
-  const [view, setView] = useState<"daily" | "weekly">("daily");
+  const [view, setView] = useState<"daily" | "weekly" | "revenues">("daily");
   const saved = loadFilters("timesheets");
   const [search, setSearch] = useState(saved.search || "");
   const [filterResource, setFilterResource] = useState(saved.resource || "all");
@@ -59,6 +59,8 @@ export default function Timesheets() {
   const [showCreate, setShowCreate] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
   const [showOneTimeRevenue, setShowOneTimeRevenue] = useState(false);
+  const [editingOtr, setEditingOtr] = useState<any>(null);
+  const [deletingOtr, setDeletingOtr] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

@@ -270,9 +270,9 @@ export default function Dashboard() {
 
       {/* ── Row 1: Financial KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="Projected Revenue" value={fmtEurExact(metrics.totalActualRevenue)} icon={TrendingUp} accent="bg-success/10" />
-        <KpiCard label="Actual Cost" value={fmtEurExact(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalPlannedBudget > 0 ? (metrics.totalActualCost / metrics.totalPlannedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
-        <KpiCard label="Gross Profit" value={fmtEurExact(metrics.totalActualRevenue - metrics.totalActualCost)} icon={DollarSign} accent={(metrics.totalActualRevenue - metrics.totalActualCost) < 0 ? "bg-destructive/10" : "bg-success/10"} />
+        <KpiCard label="Projected Revenue" value={fmtEurPrecise(metrics.totalActualRevenue)} icon={TrendingUp} accent="bg-success/10" />
+        <KpiCard label="Actual Cost" value={fmtEurPrecise(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalPlannedBudget > 0 ? (metrics.totalActualCost / metrics.totalPlannedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
+        <KpiCard label="Gross Profit" value={fmtEurPrecise(metrics.totalActualRevenue - metrics.totalActualCost)} icon={DollarSign} accent={(metrics.totalActualRevenue - metrics.totalActualCost) < 0 ? "bg-destructive/10" : "bg-success/10"} />
         <KpiCard label="Gross Margin" value={fmtPct(metrics.grossMargin)} icon={Percent} accent={metrics.grossMargin < 15 ? "bg-destructive/10" : "bg-success/10"} />
       </div>
 

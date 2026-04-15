@@ -24,9 +24,11 @@ import {
 const fmt = fmtEur;
 const fmtFull = fmtEurFull;
 function fmtPct(n: number): string { return `${n.toFixed(1)}%`; }
-function fmtEurExact(n: number | null | undefined): string {
+function fmtEurPrecise(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "—";
-  return `€${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (Math.abs(n) >= 1_000_000) return `€${(n / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(n) >= 1_000) return `€${(n / 1_000).toFixed(2)}K`;
+  return `€${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
 const tooltipStyle = {
@@ -268,9 +270,9 @@ export default function Dashboard() {
 
       {/* ── Row 1: Financial KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="Projected Revenue" value={fmtEurExact(metrics.totalActualRevenue)} icon={TrendingUp} accent="bg-success/10" />
-        <KpiCard label="Actual Cost" value={fmtEurExact(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalPlannedBudget > 0 ? (metrics.totalActualCost / metrics.totalPlannedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
-        <KpiCard label="Gross Profit" value={fmtEurExact(metrics.totalActualRevenue - metrics.totalActualCost)} icon={DollarSign} accent={(metrics.totalActualRevenue - metrics.totalActualCost) < 0 ? "bg-destructive/10" : "bg-success/10"} />
+        <KpiCard label="Projected Revenue" value={fmtEurPrecise(metrics.totalActualRevenue)} icon={TrendingUp} accent="bg-success/10" />
+        <KpiCard label="Actual Cost" value={fmtEurPrecise(metrics.totalActualCost)} sub={`${fmtPct(metrics.totalPlannedBudget > 0 ? (metrics.totalActualCost / metrics.totalPlannedBudget) * 100 : 0)} of budget`} icon={TrendingDown} />
+        <KpiCard label="Gross Profit" value={fmtEurPrecise(metrics.totalActualRevenue - metrics.totalActualCost)} icon={DollarSign} accent={(metrics.totalActualRevenue - metrics.totalActualCost) < 0 ? "bg-destructive/10" : "bg-success/10"} />
         <KpiCard label="Gross Margin" value={fmtPct(metrics.grossMargin)} icon={Percent} accent={metrics.grossMargin < 15 ? "bg-destructive/10" : "bg-success/10"} />
       </div>
 

@@ -314,6 +314,13 @@ export default function Dashboard() {
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
       if (t.is_billable) monthMap[m].revenue += toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date);
     });
+    // Add one-time revenues to monthly trends
+    filteredOneTimeRevenues.forEach((r: any) => {
+      const m = r.revenue_month?.substring(0, 7);
+      if (!m) return;
+      if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
+      monthMap[m].revenue += toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month);
+    });
     // Add expense costs
     nonSalaryExpenses.forEach((e: any) => {
       const m = e.expense_date?.substring(0, 7);

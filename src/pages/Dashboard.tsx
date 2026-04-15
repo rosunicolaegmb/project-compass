@@ -151,20 +151,83 @@ export default function Dashboard() {
 
   const metrics = useMemo(() => {
     const { from, to } = getPeriodRange(period);
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
 
     // Filter time & expense entries by period
     const filteredTime = timeEntries.filter((t: any) => t.entry_date >= from && t.entry_date <= to);
     const filteredExpenses = expenseEntries.filter((e: any) => e.expense_date >= from && e.expense_date <= to);
 
+    // Filter monthly costs by period (year/month within range)
+    const filteredMonthlyCosts = monthlyCosts.filter((mc: any) => {
+      const mcDate = new Date(mc.year, mc.month - 1, 1);
+      return mcDate >= new Date(fromDate.getFullYear(), fromDate.getMonth(), 1) &&
+             mcDate <= new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+    });
+
+    // Build labor cost per project from resource_monthly_costs + project_members
+    const laborCostByProject: Record<string, number> = {};
+    const laborCostByMonth: Record<string, number> = {}; // key = "YYYY-MM"
+
+    for (const mc of filteredMonthlyCosts) {
+      const totalCost = Number(mc.amount || 0) + Number(mc.overhead || 0);
+      if (totalCost <= 0) continue;
+      const costEur = toEur(totalCost, mc.currency || "EUR", `${mc.year}-${String(mc.month).padStart(2, "0")}-15`);
+      const monthKey = `${mc.year}-${String(mc.month).padStart(2, "0")}`;
+      const mcMonthStart = new Date(mc.year, mc.month - 1, 1);
+      const mcMonthEnd = new Date(mc.year, mc.month, 0);
+
+      // Find active project_members for this resource in this month
+      const members = projectMembers.filter((pm: any) =>
+        pm.resource_id === mc.resource_id &&
+        (!pm.start_date || new Date(pm.start_date) <= mcMonthEnd) &&
+        (!pm.end_date || new Date(pm.end_date) >= mcMonthStart)
+      );
+      if (members.length === 0) continue;
+
+      const totalAlloc = members.reduce((s: number, m: any) => s + Number(m.allocation_percentage || 0), 0);
+      if (totalAlloc <= 0) continue;
+      const multiplier = totalAlloc > 100 ? 100 / totalAlloc : 1;
+      const primaryMember = members.find((m: any) => m.is_primary) || members[0];
+
+      let distributed = 0;
+      const splits: { project_id: string; amount: number }[] = [];
+      for (const m of members) {
+        const share = (Number(m.allocation_percentage || 0) * multiplier) / 100;
+        const amt = Math.round(costEur * share * 100) / 100;
+        splits.push({ project_id: m.project_id, amount: amt });
+        distributed += amt;
+      }
+      const remainder = Math.round((costEur - distributed) * 100) / 100;
+      if (remainder > 0) {
+        const ps = splits.find((s) => s.project_id === primaryMember.project_id);
+        if (ps) ps.amount = Math.round((ps.amount + remainder) * 100) / 100;
+        else splits.push({ project_id: primaryMember.project_id, amount: remainder });
+      }
+
+      for (const s of splits) {
+        laborCostByProject[s.project_id] = (laborCostByProject[s.project_id] || 0) + s.amount;
+        laborCostByMonth[monthKey] = (laborCostByMonth[monthKey] || 0) + s.amount;
+      }
+    }
+
+    // Non-salary expenses (exclude "operational" salary allocations)
+    const nonSalaryExpenses = filteredExpenses.filter((e: any) => {
+      // Keep all expenses — salary allocations from edge function are also valid costs
+      return true;
+    });
+
     const activeProjects = projects.filter((p: any) => p.status === "active");
-    const allProjectIds = new Set(projects.map((p: any) => p.id));
 
     // Budget totals
     const totalPlannedBudget = projects.reduce((s: number, p: any) => s + toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString()), 0);
 
-    // Actuals (convert to EUR)
-    const totalActualCost = filteredTime.reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date), 0)
-      + filteredExpenses.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
+    // Total labor cost from resource_monthly_costs
+    const totalLaborCost = Object.values(laborCostByProject).reduce((s, v) => s + v, 0);
+    // Total expense cost (non-salary)
+    const totalExpenseCost = nonSalaryExpenses.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
+    const totalActualCost = totalLaborCost + totalExpenseCost;
+
     const totalActualRevenue = filteredTime.filter((t: any) => t.is_billable)
       .reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
 
@@ -178,9 +241,10 @@ export default function Dashboard() {
     // Per-project analysis
     const projectMetrics = projects.map((p: any) => {
       const pTime = filteredTime.filter((t: any) => t.project_id === p.id);
-      const pExp = filteredExpenses.filter((e: any) => e.project_id === p.id);
-      const cost = pTime.reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date), 0)
-        + pExp.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
+      const pExp = nonSalaryExpenses.filter((e: any) => e.project_id === p.id);
+      const laborCost = laborCostByProject[p.id] || 0;
+      const expenseCost = pExp.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
+      const cost = laborCost + expenseCost;
       const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
       const budget = toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString());
       const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
@@ -191,7 +255,7 @@ export default function Dashboard() {
       const pForecast = forecasts.filter((f: any) => f.project_id === p.id);
       const fRev = pForecast.reduce((s: number, f: any) => s + Number(f.forecast_labor_revenue || 0), 0);
       const fCost = pForecast.reduce((s: number, f: any) => s + Number(f.forecast_labor_cost || 0) + Number(f.forecast_expenses || 0), 0);
-      const plannedMargin = budget > 0 && revenue === 0 ? 0 : margin; // baseline
+      const plannedMargin = budget > 0 && revenue === 0 ? 0 : margin;
       const forecastMargin = fRev > 0 ? ((fRev - fCost) / fRev) * 100 : margin;
       const marginErosion = plannedMargin - forecastMargin;
 
@@ -213,14 +277,20 @@ export default function Dashboard() {
 
     // Monthly trends
     const monthMap: Record<string, { cost: number; revenue: number }> = {};
+    // Add labor costs from resource_monthly_costs
+    Object.entries(laborCostByMonth).forEach(([m, cost]) => {
+      if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
+      monthMap[m].cost += cost;
+    });
+    // Add revenue from time entries
     filteredTime.forEach((t: any) => {
       const m = t.entry_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
-      monthMap[m].cost += toEur(Number(t.hours || 0) * Number(t.cost_rate || 0), t.currency || 'EUR', t.entry_date);
       if (t.is_billable) monthMap[m].revenue += toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date);
     });
-    filteredExpenses.forEach((e: any) => {
+    // Add expense costs
+    nonSalaryExpenses.forEach((e: any) => {
       const m = e.expense_date?.substring(0, 7);
       if (!m) return;
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
@@ -248,7 +318,7 @@ export default function Dashboard() {
       overBudgetProjects, atRiskProjects, missingTimesheets,
       top10Revenue, top10Erosion, monthlyTrends, portfolioSplit,
     };
-  }, [projects, timeEntries, expenseEntries, forecasts, phases, period]);
+  }, [projects, timeEntries, expenseEntries, forecasts, phases, period, monthlyCosts, projectMembers]);
 
   // ── KPI card component ──
   const KpiCard = ({ label, value, sub, icon: Icon, accent }: {

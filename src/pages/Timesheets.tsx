@@ -407,11 +407,12 @@ export default function Timesheets() {
         loading={bulkDeleteMutation.isPending}
       />
 
-      <Tabs value={view} onValueChange={(v) => setView(v as "daily" | "weekly")} className="space-y-4">
+      <Tabs value={view} onValueChange={(v) => setView(v as "daily" | "weekly" | "revenues")} className="space-y-4">
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="daily">Daily View</TabsTrigger>
             <TabsTrigger value="weekly">Weekly View</TabsTrigger>
+            <TabsTrigger value="revenues">One-Time Revenues</TabsTrigger>
           </TabsList>
 
           {view === "daily" ? (

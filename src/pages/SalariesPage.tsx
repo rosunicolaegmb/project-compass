@@ -12,6 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { MissingRatesWarning } from "@/components/MissingRatesWarning";
+import { getToEurRate, loadConversionRates, CURRENCY_SYMBOLS, type Currency, getMissingRates } from "@/lib/currency";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -20,16 +23,27 @@ const MONTHS = [
 
 const YEARS = Array.from({ length: 10 }, (_, i) => 2024 + i);
 
+// Only EUR and RON for salary costs
+const SALARY_CURRENCIES = ["EUR", "RON"] as const;
+
 export default function SalariesPage() {
   const queryClient = useQueryClient();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
   const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1));
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [currencies, setCurrencies] = useState<Record<string, string>>({});
   const [overheads, setOverheads] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [allocating, setAllocating] = useState(false);
   const [allocationResult, setAllocationResult] = useState<string | null>(null);
+
+  // Load conversion rates
+  const { data: ratesLoaded } = useQuery({
+    queryKey: ["conversion-rates-cache"],
+    queryFn: () => loadConversionRates(),
+    staleTime: 5 * 60_000,
+  });
 
   // Fetch active resources
   const { data: resources = [] } = useQuery({
@@ -52,7 +66,7 @@ export default function SalariesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("resource_monthly_costs")
-        .select("resource_id, amount, overhead")
+        .select("resource_id, amount, overhead, currency")
         .eq("year", Number(selectedYear))
         .eq("month", Number(selectedMonth));
       if (error) throw error;
@@ -74,7 +88,7 @@ export default function SalariesPage() {
     },
   });
 
-  // Fetch conversion rates for this month
+  // Fetch conversion rates for this month (for general expenses conversion)
   const { data: conversionRates = [] } = useQuery({
     queryKey: ["conversion-rates", Number(selectedYear), Number(selectedMonth)],
     queryFn: async () => {
@@ -87,6 +101,19 @@ export default function SalariesPage() {
       return data;
     },
   });
+
+  // Check for missing rates
+  const usedCurrencies = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(currencies).forEach((c) => { if (c && c !== "EUR") set.add(c); });
+    generalExpenses.forEach((e: any) => { if (e.currency && e.currency !== "EUR") set.add(e.currency); });
+    return Array.from(set);
+  }, [currencies, generalExpenses]);
+
+  const missingRates = useMemo(
+    () => getMissingRates(usedCurrencies, Number(selectedYear), Number(selectedMonth)),
+    [usedCurrencies, selectedYear, selectedMonth, ratesLoaded]
+  );
 
   // Calculate total general expenses in EUR
   const getEurRate = (currency: string): number => {
@@ -117,20 +144,35 @@ export default function SalariesPage() {
     return totalGeneralExpensesEur / activeResourceCount;
   }, [totalGeneralExpensesEur, activeResourceCount]);
 
-  // Populate amounts and overheads when data loads
+  // Total salary cost in EUR (for info display)
+  const totalSalaryCostEur = useMemo(() => {
+    return resources.reduce((sum, r) => {
+      const amt = Number(amounts[r.id] || 0);
+      if (amt <= 0) return sum;
+      const cur = currencies[r.id] || "EUR";
+      const date = new Date(Number(selectedYear), Number(selectedMonth) - 1, 15);
+      const eurAmt = cur === "EUR" ? amt : amt * getToEurRate(cur, date);
+      return sum + eurAmt;
+    }, 0);
+  }, [resources, amounts, currencies, selectedYear, selectedMonth, ratesLoaded]);
+
+  // Populate amounts, currencies and overheads when data loads
   useEffect(() => {
     const amtMap: Record<string, string> = {};
+    const curMap: Record<string, string> = {};
     const ohMap: Record<string, string> = {};
     resources.forEach((r) => {
       const existing = existingCosts?.find((c) => c.resource_id === r.id);
       amtMap[r.id] = existing ? String(existing.amount) : "";
+      curMap[r.id] = existing?.currency || "EUR";
       ohMap[r.id] = existing && Number(existing.overhead) > 0 ? String(existing.overhead) : "";
     });
     setAmounts(amtMap);
+    setCurrencies(curMap);
     setOverheads(ohMap);
   }, [existingCosts, resources]);
 
-  // Auto-populate overhead for resources with amount > 0 that haven't been manually set
+  // Auto-populate overhead for resources with amount > 0
   useEffect(() => {
     if (calculatedOverhead === 0) return;
     setOverheads((prev) => {
@@ -138,8 +180,6 @@ export default function SalariesPage() {
       resources.forEach((r) => {
         const amt = Number(amounts[r.id] || 0);
         if (amt > 0) {
-          // Only auto-fill if empty or if it was previously auto-calculated
-          // We auto-fill when user hasn't stored a custom value yet
           const existing = existingCosts?.find((c) => c.resource_id === r.id);
           if (!existing || Number(existing.overhead) === 0) {
             next[r.id] = calculatedOverhead.toFixed(2);
@@ -168,6 +208,7 @@ export default function SalariesPage() {
         year,
         month,
         amount: Number(amounts[r.id] || 0),
+        currency: currencies[r.id] || "EUR",
         overhead: Number(overheads[r.id] || 0),
       }));
 
@@ -214,6 +255,8 @@ export default function SalariesPage() {
     <div className="page-container">
       <PageHeader title="Salaries & Contractors" description="Monthly cost amounts per resource" />
 
+      <MissingRatesWarning missingCurrencies={missingRates} month={Number(selectedMonth)} year={Number(selectedYear)} />
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -255,7 +298,7 @@ export default function SalariesPage() {
           ) : (
             <>
               {/* Summary info */}
-              <div className="flex items-center gap-4 mb-4 p-3 rounded-md bg-muted/50 text-sm">
+              <div className="flex items-center gap-4 mb-4 p-3 rounded-md bg-muted/50 text-sm flex-wrap">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -277,34 +320,72 @@ export default function SalariesPage() {
                 <span className="text-muted-foreground">
                   <strong className="text-foreground">€{calculatedOverhead.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> / resource
                 </span>
+                <Separator orientation="vertical" className="h-4" />
+                <span className="text-muted-foreground">
+                  Total Salary Cost: <strong className="text-foreground">€{totalSalaryCostEur.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                </span>
               </div>
 
               <div className="space-y-3">
-                <div className="grid grid-cols-[1fr_160px_160px] gap-4 pb-2 border-b">
+                <div className="grid grid-cols-[1fr_90px_140px_160px] gap-4 pb-2 border-b">
                   <Label className="text-xs text-muted-foreground font-medium">Resource</Label>
-                  <Label className="text-xs text-muted-foreground font-medium">Monthly Amount (EUR)</Label>
+                  <Label className="text-xs text-muted-foreground font-medium">Currency</Label>
+                  <Label className="text-xs text-muted-foreground font-medium">Monthly Amount</Label>
                   <Label className="text-xs text-muted-foreground font-medium">Overhead (EUR)</Label>
                 </div>
                 {resources.map((resource) => {
                   const hasAmount = Number(amounts[resource.id] || 0) > 0;
+                  const cur = currencies[resource.id] || "EUR";
+                  const sym = CURRENCY_SYMBOLS[cur as Currency] || "€";
+                  // Show EUR equivalent if not EUR
+                  const amt = Number(amounts[resource.id] || 0);
+                  const date = new Date(Number(selectedYear), Number(selectedMonth) - 1, 15);
+                  const eurEquiv = cur !== "EUR" && amt > 0
+                    ? amt * getToEurRate(cur, date)
+                    : null;
+
                   return (
-                    <div key={resource.id} className="grid grid-cols-[1fr_160px_160px] gap-4 items-center">
+                    <div key={resource.id} className="grid grid-cols-[1fr_90px_140px_160px] gap-4 items-center">
                       <div>
                         <p className="text-sm font-medium text-foreground">{resource.display_name}</p>
                         <p className="text-xs text-muted-foreground capitalize">
                           {resource.employment_type?.replace("_", " ") || "—"}
                         </p>
                       </div>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={amounts[resource.id] ?? ""}
-                        onChange={(e) =>
-                          setAmounts((prev) => ({ ...prev, [resource.id]: e.target.value }))
+                      <Select
+                        value={cur}
+                        onValueChange={(val) =>
+                          setCurrencies((prev) => ({ ...prev, [resource.id]: val }))
                         }
-                      />
+                      >
+                        <SelectTrigger className="w-[85px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SALARY_CURRENCIES.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {CURRENCY_SYMBOLS[c]} {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={amounts[resource.id] ?? ""}
+                          onChange={(e) =>
+                            setAmounts((prev) => ({ ...prev, [resource.id]: e.target.value }))
+                          }
+                        />
+                        {eurEquiv != null && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            ≈ €{eurEquiv.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </p>
+                        )}
+                      </div>
                       <Input
                         type="number"
                         step="0.01"

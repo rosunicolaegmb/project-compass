@@ -591,6 +591,56 @@ export default function ProjectDetail() {
           </Card>
         </TabsContent>
 
+        {/* ONE-TIME REVENUE TAB */}
+        <TabsContent value="revenue">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Banknote className="h-4 w-4" /> One-Time Revenue Entries
+                {oneTimeRevenueTotal > 0 && (
+                  <Badge variant="outline" className="ml-2 text-xs">Total: {fmtEur(oneTimeRevenueTotal)}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Amount (EUR)</TableHead>
+                    <TableHead>Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {oneTimeRevenues.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No one-time revenue entries recorded.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    oneTimeRevenues.map((r: any) => (
+                      <TableRow key={r.id} className="border-border hover:bg-muted/50">
+                        <TableCell>{r.revenue_month}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {fmtCurrency(r.amount, r.currency)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {fmtEur(toEur(Number(r.amount || 0), r.currency || "EUR", r.revenue_month))}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[300px] truncate">
+                          {r.reason || "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* EXPENSES TAB */}
         <TabsContent value="expenses">
           <Card>

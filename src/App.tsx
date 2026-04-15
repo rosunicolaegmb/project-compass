@@ -18,7 +18,7 @@ import Expenses from "./pages/Expenses";
 import Forecasting from "./pages/Forecasting";
 import Reports from "./pages/Reports";
 import ProjectDetail from "./pages/ProjectDetail";
-import AuditLog from "./pages/AuditLog";
+import Alerts from "./pages/Alerts";
 import SettingsPage from "./pages/SettingsPage";
 import ConfigurePage from "./pages/ConfigurePage";
 import ConversionRatesPage from "./pages/ConversionRatesPage";
@@ -49,7 +49,7 @@ const App = () => (
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/forecasting" element={<Forecasting />} />
               <Route path="/reports" element={<Reports />} />
-              <Route path="/audit-log" element={<ProtectedRoute allowedRoles={["admin"]}><AuditLog /></ProtectedRoute>} />
+              <Route path="/alerts" element={<ProtectedRoute allowedRoles={["admin"]}><Alerts /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowedRoles={["admin"]}><SettingsPage /></ProtectedRoute>} />
               <Route path="/configure" element={<ProtectedRoute allowedRoles={["admin"]}><ConfigurePage /></ProtectedRoute>} />
               <Route path="/configure/conversion-rates" element={<ProtectedRoute allowedRoles={["admin"]}><ConversionRatesPage /></ProtectedRoute>} />

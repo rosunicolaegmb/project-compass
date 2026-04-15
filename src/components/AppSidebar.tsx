@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, FolderKanban, Layers, UserCog,
   BadgeDollarSign, Clock, Receipt, TrendingUp, BarChart3,
-  ScrollText, Settings, Wrench, LogOut,
+  Bell, Settings, Wrench, LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -37,7 +37,7 @@ const resourceNav: NavItem[] = [
 const analysisNav: NavItem[] = [
   { title: "Forecasting", url: "/forecasting", icon: TrendingUp, module: "forecasting" },
   { title: "Reports", url: "/reports", icon: BarChart3, module: "reports" },
-  { title: "Audit Log", url: "/audit-log", icon: ScrollText, module: "auditLog" },
+  { title: "Alerts", url: "/alerts", icon: Bell, module: "alerts" },
 ];
 
 const systemNav: NavItem[] = [

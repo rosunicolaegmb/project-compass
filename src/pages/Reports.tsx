@@ -319,6 +319,7 @@ export default function Reports() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="time_and_materials">T&M</SelectItem>
             <SelectItem value="fixed_price">Fixed Price</SelectItem>
+            <SelectItem value="support">Support</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>

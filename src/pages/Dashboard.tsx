@@ -268,7 +268,9 @@ export default function Dashboard() {
       const laborCost = laborCostByProject[p.id] || 0;
       const expenseCost = pExp.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
       const cost = laborCost + expenseCost;
-      const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+      const timeRevenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+      const otrRevenue = oneTimeRevenueByProject[p.id] || 0;
+      const revenue = timeRevenue + otrRevenue;
       const budget = toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString());
       const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
       const budgetUsed = budget > 0 ? (cost / budget) * 100 : 0;

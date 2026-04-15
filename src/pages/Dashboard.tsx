@@ -137,6 +137,16 @@ export default function Dashboard() {
     },
   });
 
+  const { data: oneTimeRevenues = [] } = useQuery({
+    queryKey: ["dash-one-time-revenues"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("one_time_revenues")
+        .select("project_id, revenue_month, amount, currency");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Detect missing conversion rates for current month
   const now2 = new Date();
   const dashMissingRates = useMemo(() => {
@@ -228,8 +238,21 @@ export default function Dashboard() {
     const totalExpenseCost = nonSalaryExpenses.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
     const totalActualCost = totalLaborCost + totalExpenseCost;
 
-    const totalActualRevenue = filteredTime.filter((t: any) => t.is_billable)
+    const totalTimeRevenue = filteredTime.filter((t: any) => t.is_billable)
       .reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+
+    // One-time revenues filtered by period
+    const filteredOneTimeRevenues = oneTimeRevenues.filter((r: any) => r.revenue_month >= from && r.revenue_month <= to);
+    const totalOneTimeRevenue = filteredOneTimeRevenues.reduce((s: number, r: any) => s + toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month), 0);
+
+    // One-time revenue per project
+    const oneTimeRevenueByProject: Record<string, number> = {};
+    filteredOneTimeRevenues.forEach((r: any) => {
+      const amt = toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month);
+      oneTimeRevenueByProject[r.project_id] = (oneTimeRevenueByProject[r.project_id] || 0) + amt;
+    });
+
+    const totalActualRevenue = totalTimeRevenue + totalOneTimeRevenue;
 
     // Forecast
     const totalForecastCost = forecasts.reduce((s: number, f: any) => s + Number(f.forecast_labor_cost || 0) + Number(f.forecast_expenses || 0), 0) || totalActualCost;
@@ -245,7 +268,9 @@ export default function Dashboard() {
       const laborCost = laborCostByProject[p.id] || 0;
       const expenseCost = pExp.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || 'EUR', e.expense_date), 0);
       const cost = laborCost + expenseCost;
-      const revenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+      const timeRevenue = pTime.filter((t: any) => t.is_billable).reduce((s: number, t: any) => s + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date), 0);
+      const otrRevenue = oneTimeRevenueByProject[p.id] || 0;
+      const revenue = timeRevenue + otrRevenue;
       const budget = toEur(Number(p.planned_budget || p.total_budget || 0), p.currency || 'EUR', p.start_date || new Date().toISOString());
       const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
       const budgetUsed = budget > 0 ? (cost / budget) * 100 : 0;
@@ -289,6 +314,13 @@ export default function Dashboard() {
       if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
       if (t.is_billable) monthMap[m].revenue += toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date);
     });
+    // Add one-time revenues to monthly trends
+    filteredOneTimeRevenues.forEach((r: any) => {
+      const m = r.revenue_month?.substring(0, 7);
+      if (!m) return;
+      if (!monthMap[m]) monthMap[m] = { cost: 0, revenue: 0 };
+      monthMap[m].revenue += toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month);
+    });
     // Add expense costs
     nonSalaryExpenses.forEach((e: any) => {
       const m = e.expense_date?.substring(0, 7);
@@ -318,7 +350,7 @@ export default function Dashboard() {
       overBudgetProjects, atRiskProjects, missingTimesheets,
       top10Revenue, top10Erosion, monthlyTrends, portfolioSplit,
     };
-  }, [projects, timeEntries, expenseEntries, forecasts, phases, period, monthlyCosts, projectMembers]);
+  }, [projects, timeEntries, expenseEntries, forecasts, phases, period, monthlyCosts, projectMembers, oneTimeRevenues]);
 
   // ── KPI card component ──
   const KpiCard = ({ label, value, sub, icon: Icon, accent }: {

@@ -16,10 +16,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TimeEntryFormDialog } from "@/components/timesheets/TimeEntryFormDialog";
 import { MonthlyTimeEntryDialog } from "@/components/timesheets/MonthlyTimeEntryDialog";
+import { OneTimeRevenueDialog } from "@/components/timesheets/OneTimeRevenueDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { saveFilters, loadFilters } from "@/lib/filters";
 import { exportToCsv } from "@/lib/csv-export";
-import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, CalendarDays } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, X, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, CalendarDays, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import {
   startOfWeek, endOfWeek, addWeeks, subWeeks, format, parseISO,
@@ -57,6 +58,7 @@ export default function Timesheets() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
+  const [showOneTimeRevenue, setShowOneTimeRevenue] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -274,6 +276,11 @@ export default function Timesheets() {
                 toast.success("Exported timesheets to CSV");
               }}>
                 <Download className="h-4 w-4 mr-1" />Export
+              </Button>
+            )}
+            {canEdit && (
+              <Button size="sm" variant="outline" onClick={() => setShowOneTimeRevenue(true)}>
+                <Banknote className="h-4 w-4 mr-1" /> One-Time Revenue
               </Button>
             )}
             {canEdit && (
@@ -536,6 +543,7 @@ export default function Timesheets() {
       <TimeEntryFormDialog open={showCreate} onOpenChange={setShowCreate} entry={null} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <TimeEntryFormDialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} entry={editing} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
       <MonthlyTimeEntryDialog open={showMonthly} onOpenChange={setShowMonthly} resources={resources} projects={projects} phases={phases} reporterResourceId={reporterResourceId} />
+      <OneTimeRevenueDialog open={showOneTimeRevenue} onOpenChange={setShowOneTimeRevenue} />
       <DeleteConfirmDialog
         open={!!deleting} onOpenChange={(o) => { if (!o) setDeleting(null); }}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}

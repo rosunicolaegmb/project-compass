@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditModule } from "@/lib/auth-helpers";
 import { cn } from "@/lib/utils";
 import { calculateBudgetMetrics, type HealthStatus } from "@/lib/budget-calculations";
-import { loadConversionRates, fmtEur } from "@/lib/currency";
+import { loadConversionRates, fmtEur, toEur, fmtCurrency } from "@/lib/currency";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
@@ -21,7 +21,7 @@ import { PhaseFormDialog } from "@/components/phases/PhaseFormDialog";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Pencil, Trash2, DollarSign, TrendingUp, Clock,
-  AlertTriangle, CheckCircle2, BarChart3, Users, Receipt, Calendar, Target, Percent,
+  AlertTriangle, CheckCircle2, BarChart3, Users, Receipt, Calendar, Target, Percent, Banknote,
 } from "lucide-react";
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
@@ -189,6 +189,24 @@ export default function ProjectDetail() {
     },
     enabled: !!id,
   });
+
+  // Fetch one-time revenues
+  const { data: oneTimeRevenues = [] } = useQuery({
+    queryKey: ["project-one-time-revenues", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("one_time_revenues")
+        .select("*")
+        .eq("project_id", id!)
+        .order("revenue_month", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const oneTimeRevenueTotal = oneTimeRevenues.reduce((s: number, r: any) =>
+    s + toEur(Number(r.amount || 0), r.currency || "EUR", r.revenue_month), 0);
 
   const deletePhase = useMutation({
     mutationFn: async (phaseId: string) => {
@@ -379,6 +397,7 @@ export default function ProjectDetail() {
           <TabsTrigger value="phases">Phases ({phases.length})</TabsTrigger>
           <TabsTrigger value="team">Team ({members.length})</TabsTrigger>
           <TabsTrigger value="timesheets">Timesheets ({timeEntries.length})</TabsTrigger>
+          <TabsTrigger value="revenue">Revenue ({oneTimeRevenues.length})</TabsTrigger>
           <TabsTrigger value="expenses">Expenses ({expenses.length})</TabsTrigger>
           <TabsTrigger value="budget">Budget History</TabsTrigger>
           <TabsTrigger value="forecasts">Forecasts</TabsTrigger>
@@ -562,6 +581,56 @@ export default function ProjectDetail() {
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={t.approval_status === "approved" ? "approved" : t.approval_status === "rejected" ? "at-risk" : "pending"} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ONE-TIME REVENUE TAB */}
+        <TabsContent value="revenue">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Banknote className="h-4 w-4" /> One-Time Revenue Entries
+                {oneTimeRevenueTotal > 0 && (
+                  <Badge variant="outline" className="ml-2 text-xs">Total: {fmtEur(oneTimeRevenueTotal)}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Amount (EUR)</TableHead>
+                    <TableHead>Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {oneTimeRevenues.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        No one-time revenue entries recorded.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    oneTimeRevenues.map((r: any) => (
+                      <TableRow key={r.id} className="border-border hover:bg-muted/50">
+                        <TableCell>{r.revenue_month}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {fmtCurrency(r.amount, r.currency)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {fmtEur(toEur(Number(r.amount || 0), r.currency || "EUR", r.revenue_month))}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[300px] truncate">
+                          {r.reason || "—"}
                         </TableCell>
                       </TableRow>
                     ))

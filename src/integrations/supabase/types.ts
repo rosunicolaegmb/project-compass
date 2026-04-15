@@ -375,6 +375,47 @@ export type Database = {
           },
         ]
       }
+      one_time_revenues: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          project_id: string
+          reason: string | null
+          revenue_month: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          project_id: string
+          reason?: string | null
+          revenue_month: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          project_id?: string
+          reason?: string | null
+          revenue_month?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_time_revenues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

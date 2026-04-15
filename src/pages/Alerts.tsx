@@ -144,6 +144,56 @@ function generateAlerts(
     }
   }
 
+  // 11. Missing timesheet for completed past months
+  const lastCompletedMonth = today.getMonth(); // 0-indexed current month; last completed = month-1
+  const lastCompletedYear = lastCompletedMonth === 0 ? currentYear - 1 : currentYear;
+  const lastCompMonth = lastCompletedMonth === 0 ? 12 : lastCompletedMonth; // 1-indexed
+
+  for (const res of activeResources) {
+    const resMembers = members.filter(m => m.resource_id === res.id);
+    if (resMembers.length === 0) continue;
+
+    // Find earliest allocation start
+    const starts = resMembers.map(m => m.start_date).filter(Boolean) as string[];
+    if (starts.length === 0) continue;
+    const earliestStart = starts.sort()[0];
+    const startDate = new Date(earliestStart);
+    let checkYear = startDate.getFullYear();
+    let checkMonth = startDate.getMonth() + 1; // 1-indexed
+
+    while (checkYear < lastCompletedYear || (checkYear === lastCompletedYear && checkMonth <= lastCompMonth)) {
+      // Check if resource had an active allocation this month
+      const monthStart = `${checkYear}-${String(checkMonth).padStart(2, "0")}-01`;
+      const lastDay = new Date(checkYear, checkMonth, 0).getDate();
+      const monthEnd = `${checkYear}-${String(checkMonth).padStart(2, "0")}-${lastDay}`;
+
+      const hadAllocation = resMembers.some(m =>
+        (!m.start_date || m.start_date <= monthEnd) &&
+        (!m.end_date || m.end_date >= monthStart)
+      );
+
+      if (hadAllocation) {
+        const hasEntries = timeEntries.some(te =>
+          te.resource_id === res.id &&
+          te.entry_date >= monthStart &&
+          te.entry_date <= monthEnd
+        );
+        if (!hasEntries) {
+          alerts.push({
+            severity: "warning",
+            type: "Missing Timesheet",
+            message: `${res.display_name} has no timesheet entries for ${checkYear}-${String(checkMonth).padStart(2, "0")}`,
+            date: todayStr,
+          });
+        }
+      }
+
+      // Next month
+      checkMonth++;
+      if (checkMonth > 12) { checkMonth = 1; checkYear++; }
+    }
+  }
+
   return alerts.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity] || b.date.localeCompare(a.date));
 }
 

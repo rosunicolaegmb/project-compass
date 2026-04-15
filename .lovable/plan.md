@@ -1,30 +1,45 @@
 
 
-## Replace Cost Rate with Daily Rate in Timesheet Forms
+## Show Resource Costs on Dashboard
 
-### Changes
+### Root Causes
+1. **The dashboard ignores `resource_monthly_costs`** — it only calculates cost from `time_entries.cost_rate × hours` (which is now null) and `expense_entries.amount`.
+2. **"Run Allocation" was never clicked** for February — so no salary expense entries were created in `expense_entries`.
+3. **Dragos has zero time entries** for Feb, so the allocation edge function would skip him even if run.
 
-Both `TimeEntryFormDialog.tsx` and `MonthlyTimeEntryDialog.tsx` will be updated identically:
+### Solution
 
-1. **Remove Cost Rate field** from the form UI (keep `cost_rate` in the schema/payload so existing DB column still gets a value — set it to `null` or `0` on submit)
+Two-part fix to make salary costs flow to the dashboard automatically:
 
-2. **Add Daily Rate field** alongside Bill Rate (hr). New field `daily_rate` added to the form schema (not stored in DB — it's a UI-only computed field)
+**Part 1: Dashboard reads `resource_monthly_costs` directly**
 
-3. **Auto-conversion logic** (8 hours/day):
-   - When user types a **Bill Rate** → `Daily Rate = Bill Rate × 8`
-   - When user types a **Daily Rate** → `Bill Rate = Daily Rate / 8`
-   - Use a flag to track which field the user is currently editing to avoid infinite loops
+Add a new query in `Dashboard.tsx` to fetch `resource_monthly_costs`. For each resource-month, convert the amount to EUR using `toEur()`, then allocate it proportionally across projects using `project_members` allocation percentages (same logic as the edge function, but read-only for display).
 
-4. **Auto-fill from resource**: When resource changes, set `bill_rate` from resource defaults and compute `daily_rate = bill_rate × 8`. No longer auto-fill `cost_rate`.
+This means the dashboard shows salary costs immediately after saving — no need to run allocation first.
 
-### UI Layout
-The rate section becomes two fields side by side:
-- **Bill Rate ({sym}/hr)**
-- **Daily Rate ({sym}/day)**
+**Part 2: Fix the cost calculation**
 
-Cost Rate is hidden from the UI. The `cost_rate` value in the DB payload will be set to `null`.
+The current `totalActualCost` sums `hours × cost_rate` from time entries, but `cost_rate` is now always null. Update the cost calculation to:
+- Use `resource_monthly_costs` as the primary source of labor cost (salary + overhead)
+- Keep expense entries as a secondary cost source (non-salary expenses)
+- Stop relying on `time_entries.cost_rate` for cost (it's effectively deprecated)
 
 ### Files to edit
-- `src/components/timesheets/TimeEntryFormDialog.tsx`
-- `src/components/timesheets/MonthlyTimeEntryDialog.tsx`
+- `src/pages/Dashboard.tsx` — add query for `resource_monthly_costs` and `project_members`, rewrite cost calculation in the `metrics` useMemo
+
+### Technical detail
+
+```text
+New cost calculation:
+  Labor Cost = Σ (resource_monthly_costs.amount + overhead) converted to EUR
+               allocated per project via project_members.allocation_percentage
+  Expense Cost = Σ expense_entries.amount (non-salary) converted to EUR
+  Total Actual Cost = Labor Cost + Expense Cost
+```
+
+The dashboard will fetch:
+- `resource_monthly_costs` (filtered by period range months)
+- `project_members` (to map resources → projects with allocation %)
+
+For each resource-month cost, distribute to projects using the same allocation logic as the edge function. This gives immediate visibility without requiring the allocation step.
 

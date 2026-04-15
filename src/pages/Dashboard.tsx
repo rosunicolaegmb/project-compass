@@ -350,7 +350,7 @@ export default function Dashboard() {
       overBudgetProjects, atRiskProjects, missingTimesheets,
       top10Revenue, top10Erosion, monthlyTrends, portfolioSplit,
     };
-  }, [projects, timeEntries, expenseEntries, forecasts, phases, period, monthlyCosts, projectMembers]);
+  }, [projects, timeEntries, expenseEntries, forecasts, phases, period, monthlyCosts, projectMembers, oneTimeRevenues]);
 
   // ── KPI card component ──
   const KpiCard = ({ label, value, sub, icon: Icon, accent }: {

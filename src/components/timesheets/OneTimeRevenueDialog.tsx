@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -10,12 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { toast } from "sonner";
 
+interface EditData {
+  id: string;
+  project_id: string;
+  revenue_month: string;
+  amount: number;
+  currency: string;
+  reason: string | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editData?: EditData | null;
 }
 
-export function OneTimeRevenueDialog({ open, onOpenChange }: Props) {
+export function OneTimeRevenueDialog({ open, onOpenChange, editData }: Props) {
   const queryClient = useQueryClient();
 
   const [projectId, setProjectId] = useState("");
@@ -26,6 +36,20 @@ export function OneTimeRevenueDialog({ open, onOpenChange }: Props) {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("EUR");
   const [reason, setReason] = useState("");
+
+  // Pre-fill when editing
+  useEffect(() => {
+    if (editData) {
+      setProjectId(editData.project_id);
+      // revenue_month is "YYYY-MM-DD", extract "YYYY-MM"
+      setMonth(editData.revenue_month.substring(0, 7));
+      setAmount(String(editData.amount));
+      setCurrency(editData.currency);
+      setReason(editData.reason || "");
+    } else {
+      resetForm();
+    }
+  }, [editData, open]);
 
   const { data: projects = [] } = useQuery({
     queryKey: ["otr-projects"],
@@ -43,19 +67,31 @@ export function OneTimeRevenueDialog({ open, onOpenChange }: Props) {
   const mutation = useMutation({
     mutationFn: async () => {
       const revenueMonth = `${month}-01`;
-      const { error } = await supabase.from("one_time_revenues").insert({
-        project_id: projectId,
-        revenue_month: revenueMonth,
-        amount: Number(amount),
-        currency,
-        reason: reason || null,
-      });
-      if (error) throw error;
+      if (editData) {
+        const { error } = await supabase.from("one_time_revenues").update({
+          project_id: projectId,
+          revenue_month: revenueMonth,
+          amount: Number(amount),
+          currency,
+          reason: reason || null,
+        }).eq("id", editData.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("one_time_revenues").insert({
+          project_id: projectId,
+          revenue_month: revenueMonth,
+          amount: Number(amount),
+          currency,
+          reason: reason || null,
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dash-one-time-revenues"] });
       queryClient.invalidateQueries({ queryKey: ["project-one-time-revenues"] });
-      toast.success("One-time revenue recorded");
+      queryClient.invalidateQueries({ queryKey: ["otr-list"] });
+      toast.success(editData ? "Revenue updated" : "One-time revenue recorded");
       resetForm();
       onOpenChange(false);
     },
@@ -67,6 +103,8 @@ export function OneTimeRevenueDialog({ open, onOpenChange }: Props) {
     setAmount("");
     setCurrency("EUR");
     setReason("");
+    const now = new Date();
+    setMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   }
 
   const canSave = projectId && amount && Number(amount) > 0;
@@ -75,7 +113,7 @@ export function OneTimeRevenueDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Record One-Time Revenue</DialogTitle>
+          <DialogTitle>{editData ? "Edit One-Time Revenue" : "Record One-Time Revenue"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -128,7 +166,7 @@ export function OneTimeRevenueDialog({ open, onOpenChange }: Props) {
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => mutation.mutate()} disabled={!canSave || mutation.isPending}>
-            {mutation.isPending ? "Saving..." : "Save"}
+            {mutation.isPending ? "Saving..." : editData ? "Update" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

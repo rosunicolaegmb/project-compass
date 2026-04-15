@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canEditModule } from "@/lib/auth-helpers";
 import { cn } from "@/lib/utils";
 import { calculateBudgetMetrics, type HealthStatus } from "@/lib/budget-calculations";
-import { loadConversionRates, fmtEur } from "@/lib/currency";
+import { loadConversionRates, fmtEur, toEur, fmtCurrency } from "@/lib/currency";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
@@ -21,7 +21,7 @@ import { PhaseFormDialog } from "@/components/phases/PhaseFormDialog";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Pencil, Trash2, DollarSign, TrendingUp, Clock,
-  AlertTriangle, CheckCircle2, BarChart3, Users, Receipt, Calendar, Target, Percent,
+  AlertTriangle, CheckCircle2, BarChart3, Users, Receipt, Calendar, Target, Percent, Banknote,
 } from "lucide-react";
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {

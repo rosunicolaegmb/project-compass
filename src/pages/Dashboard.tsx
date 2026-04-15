@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { loadConversionRates, toEur, fmtEur, fmtEurFull, getMissingRates } from 
 import { MissingRatesWarning } from "@/components/MissingRatesWarning";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -38,20 +39,26 @@ const tooltipStyle = {
 
 type Period = "monthly" | "quarterly" | "yearly";
 
-function getPeriodRange(period: Period): { from: string; to: string } {
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function getPeriodRange(period: Period, selectedMonth: number, selectedYear: number): { from: string; to: string } {
   const now = new Date();
   let from: Date;
+  let to: Date;
   if (period === "monthly") {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    from = new Date(selectedYear, selectedMonth, 1);
+    to = new Date(selectedYear, selectedMonth + 1, 0); // last day of selected month
   } else if (period === "quarterly") {
     const q = Math.floor(now.getMonth() / 3) * 3;
     from = new Date(now.getFullYear(), q, 1);
+    to = now;
   } else {
     from = new Date(now.getFullYear(), 0, 1);
+    to = now;
   }
   return {
     from: from.toISOString().substring(0, 10),
-    to: now.toISOString().substring(0, 10),
+    to: to.toISOString().substring(0, 10),
   };
 }
 

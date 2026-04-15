@@ -85,8 +85,11 @@ export default function GeneralExpensesPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, field, value }: { id: string; field: string; value: any }) => {
-      const { error } = await supabase.from("general_expenses").update({ [field]: value }).eq("id", id);
+    mutationFn: async ({ id, field, value }: { id: string; field: "description" | "amount" | "currency"; value: any }) => {
+      const updateObj = field === "description" ? { description: value as string }
+        : field === "amount" ? { amount: value as number }
+        : { currency: value as string };
+      const { error } = await supabase.from("general_expenses").update(updateObj).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

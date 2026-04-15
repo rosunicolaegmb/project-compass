@@ -221,9 +221,9 @@ export default function Dashboard() {
       }
     }
 
-    // Non-salary expenses (exclude "operational" salary allocations)
+    // Non-salary expenses (exclude salary allocations to prevent double-counting with resource_monthly_costs)
     const nonSalaryExpenses = filteredExpenses.filter((e: any) => {
-      // Keep all expenses — salary allocations from edge function are also valid costs
+      if (e.description && String(e.description).startsWith("Salary allocation")) return false;
       return true;
     });
 

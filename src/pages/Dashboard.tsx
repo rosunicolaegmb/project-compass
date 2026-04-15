@@ -63,6 +63,7 @@ function getPeriodRange(period: Period, selectedMonth: number, selectedYear: num
 }
 
 export default function Dashboard() {
+  const { isReporter } = useAuth();
   const now = new Date();
   const [period, setPeriod] = useState<Period>("monthly");
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-based
@@ -169,7 +170,7 @@ export default function Dashboard() {
   }, [timeEntries, expenseEntries]);
 
   const metrics = useMemo(() => {
-    const { from, to } = getPeriodRange(period);
+    const { from, to } = getPeriodRange(period, selectedMonth, selectedYear);
     const fromDate = new Date(from);
     const toDate = new Date(to);
 
@@ -388,13 +389,35 @@ export default function Dashboard() {
     <div className="page-container">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <PageHeader title="Executive Dashboard" description="Portfolio-level financial performance and health indicators" />
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)} className="shrink-0">
-          <TabsList>
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
-            <TabsTrigger value="yearly">Yearly</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-2 shrink-0">
+          {period === "monthly" && (
+            <>
+              <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+                <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MONTH_NAMES.map((m, i) => (
+                    <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+                <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <TabsList>
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+              <TabsTrigger value="yearly">Yearly</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       <MissingRatesWarning missingCurrencies={dashMissingRates} month={now2.getMonth() + 1} year={now2.getFullYear()} />

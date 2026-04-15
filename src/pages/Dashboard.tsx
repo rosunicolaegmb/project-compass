@@ -41,13 +41,17 @@ type Period = "monthly" | "quarterly" | "yearly";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+function toLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function getPeriodRange(period: Period, selectedMonth: number, selectedYear: number): { from: string; to: string } {
   const now = new Date();
   let from: Date;
   let to: Date;
   if (period === "monthly") {
     from = new Date(selectedYear, selectedMonth, 1);
-    to = new Date(selectedYear, selectedMonth + 1, 0); // last day of selected month
+    to = new Date(selectedYear, selectedMonth + 1, 0);
   } else if (period === "quarterly") {
     const q = Math.floor(now.getMonth() / 3) * 3;
     from = new Date(now.getFullYear(), q, 1);
@@ -57,8 +61,8 @@ function getPeriodRange(period: Period, selectedMonth: number, selectedYear: num
     to = now;
   }
   return {
-    from: from.toISOString().substring(0, 10),
-    to: to.toISOString().substring(0, 10),
+    from: toLocalDate(from),
+    to: toLocalDate(to),
   };
 }
 

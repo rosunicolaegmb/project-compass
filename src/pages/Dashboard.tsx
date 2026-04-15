@@ -63,8 +63,10 @@ function getPeriodRange(period: Period, selectedMonth: number, selectedYear: num
 }
 
 export default function Dashboard() {
-  const { isReporter } = useAuth();
-  const [period, setPeriod] = useState<Period>("yearly");
+  const now = new Date();
+  const [period, setPeriod] = useState<Period>("monthly");
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-based
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   // Load conversion rates
   useEffect(() => { loadConversionRates(); }, []);

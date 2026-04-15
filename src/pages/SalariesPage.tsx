@@ -190,6 +190,24 @@ export default function SalariesPage() {
     setSaving(false);
   };
 
+  const handleAllocate = async () => {
+    setAllocating(true);
+    setAllocationResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("allocate-monthly-costs", {
+        body: { year: Number(selectedYear), month: Number(selectedMonth) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const msg = data?.message || `Allocated ${data?.allocated || 0} entries`;
+      setAllocationResult(msg);
+      toast.success(msg);
+    } catch (err: any) {
+      toast.error("Allocation failed: " + (err.message || "Unknown error"));
+    }
+    setAllocating(false);
+  };
+
   const monthLabel = `${MONTHS[Number(selectedMonth) - 1]} ${selectedYear}`;
 
   return (
@@ -304,8 +322,18 @@ export default function SalariesPage() {
                 })}
               </div>
               <Separator className="my-6" />
-              <div className="flex justify-end">
-                <Button onClick={handleSave} disabled={saving}>
+              {allocationResult && (
+                <Alert className="mb-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>{allocationResult}</AlertDescription>
+                </Alert>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleAllocate} disabled={allocating || saving}>
+                  {allocating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                  Run Allocation for {monthLabel}
+                </Button>
+                <Button onClick={handleSave} disabled={saving || allocating}>
                   {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                   Save for {monthLabel}
                 </Button>

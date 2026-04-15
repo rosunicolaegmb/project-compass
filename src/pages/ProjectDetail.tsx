@@ -208,6 +208,7 @@ export default function ProjectDetail() {
   const oneTimeRevenueTotal = oneTimeRevenues.reduce((s: number, r: any) =>
     s + toEur(Number(r.amount || 0), r.currency || "EUR", r.revenue_month), 0);
 
+  const deletePhase = useMutation({
     mutationFn: async (phaseId: string) => {
       const { error } = await supabase
         .from("project_phases")

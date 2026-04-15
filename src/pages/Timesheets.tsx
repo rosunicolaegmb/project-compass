@@ -137,6 +137,34 @@ export default function Timesheets() {
     },
   });
 
+  // Fetch one-time revenues
+  const { data: otrList = [], isLoading: otrLoading } = useQuery({
+    queryKey: ["otr-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("one_time_revenues")
+        .select("*, projects(name)")
+        .order("revenue_month", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const deleteOtrMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("one_time_revenues").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["otr-list"] });
+      queryClient.invalidateQueries({ queryKey: ["dash-one-time-revenues"] });
+      queryClient.invalidateQueries({ queryKey: ["project-one-time-revenues"] });
+      toast.success("Revenue entry deleted");
+      setDeletingOtr(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("time_entries").update({ deleted_at: new Date().toISOString() }).eq("id", id);

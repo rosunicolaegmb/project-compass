@@ -194,9 +194,12 @@ export default function Dashboard() {
     const laborCostByMonth: Record<string, number> = {}; // key = "YYYY-MM"
 
     for (const mc of filteredMonthlyCosts) {
-      const totalCost = Number(mc.amount || 0) + Number(mc.overhead || 0);
-      if (totalCost <= 0) continue;
-      const costEur = toEur(totalCost, mc.currency || "EUR", `${mc.year}-${String(mc.month).padStart(2, "0")}-15`);
+      const salary = Number(mc.amount || 0);
+      const overhead = Number(mc.overhead || 0); // overhead is stored in EUR
+      if (salary <= 0 && overhead <= 0) continue;
+      const dateStr = `${mc.year}-${String(mc.month).padStart(2, "0")}-15`;
+      const salaryEur = toEur(salary, mc.currency || "EUR", dateStr);
+      const costEur = salaryEur + overhead;
       const monthKey = `${mc.year}-${String(mc.month).padStart(2, "0")}`;
       const mcMonthStart = new Date(mc.year, mc.month - 1, 1);
       const mcMonthEnd = new Date(mc.year, mc.month, 0);

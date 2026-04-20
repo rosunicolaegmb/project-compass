@@ -20,6 +20,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
+import { ProjectFinancialsTable } from "@/components/dashboard/ProjectFinancialsTable";
 
 // ── helpers ──
 const fmt = fmtEur;
@@ -646,6 +647,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Per-project financials ── */}
+      <ProjectFinancialsTable />
     </div>
   );
 }

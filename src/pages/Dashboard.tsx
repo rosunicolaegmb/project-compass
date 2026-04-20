@@ -647,6 +647,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Per-project financials ── */}
+      <ProjectFinancialsTable />
     </div>
   );
 }

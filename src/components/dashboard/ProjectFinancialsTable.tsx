@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toEur, fmtEur } from "@/lib/currency";
+import { calculateLaborCostAllocation } from "@/lib/labor-cost-allocation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -83,6 +84,19 @@ export function ProjectFinancialsTable() {
     queryFn: async () => {
       let q = supabase.from("resource_monthly_costs")
         .select("resource_id, year, month, amount, overhead, currency")
+        .eq("year", year);
+      if (view === "monthly") q = q.eq("month", month + 1);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: generalExpenses = [] } = useQuery({
+    queryKey: ["pft-ge", year, view, month],
+    queryFn: async () => {
+      let q = supabase.from("general_expenses")
+        .select("amount, currency, year, month")
         .eq("year", year);
       if (view === "monthly") q = q.eq("month", month + 1);
       const { data, error } = await q;

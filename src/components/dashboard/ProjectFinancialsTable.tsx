@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toEur, fmtEur } from "@/lib/currency";
+import { calculateLaborCostAllocation } from "@/lib/labor-cost-allocation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -91,6 +92,19 @@ export function ProjectFinancialsTable() {
     },
   });
 
+  const { data: generalExpenses = [] } = useQuery({
+    queryKey: ["pft-ge", year, view, month],
+    queryFn: async () => {
+      let q = supabase.from("general_expenses")
+        .select("amount, currency, year, month")
+        .eq("year", year);
+      if (view === "monthly") q = q.eq("month", month + 1);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: projectMembers = [] } = useQuery({
     queryKey: ["pft-pm"],
     queryFn: async () => {
@@ -112,50 +126,15 @@ export function ProjectFinancialsTable() {
     },
   });
 
-  // ── compute per-project metrics (same logic as Dashboard) ──
+  // ── compute per-project metrics (shared allocation engine) ──
   const rows = useMemo(() => {
-    // Labor cost per project from monthly_costs distributed via project_members allocation
-    const laborCostByProject: Record<string, number> = {};
-
-    for (const mc of monthlyCosts) {
-      const salary = Number((mc as any).amount || 0);
-      const overhead = Number((mc as any).overhead || 0);
-      if (salary <= 0 && overhead <= 0) continue;
-      const dateStr = `${(mc as any).year}-${String((mc as any).month).padStart(2, "0")}-15`;
-      const salaryEur = toEur(salary, (mc as any).currency || "EUR", dateStr);
-      const costEur = salaryEur + overhead;
-
-      const mcMonthStart = new Date((mc as any).year, (mc as any).month - 1, 1);
-      const mcMonthEnd = new Date((mc as any).year, (mc as any).month, 0);
-      const members = projectMembers.filter((pm: any) =>
-        pm.resource_id === (mc as any).resource_id &&
-        (!pm.start_date || new Date(pm.start_date) <= mcMonthEnd) &&
-        (!pm.end_date || new Date(pm.end_date) >= mcMonthStart)
-      );
-      if (members.length === 0) continue;
-
-      const totalAlloc = members.reduce((s: number, m: any) => s + Number(m.allocation_percentage || 0), 0);
-      if (totalAlloc <= 0) continue;
-      const multiplier = totalAlloc > 100 ? 100 / totalAlloc : 1;
-      const primary = members.find((m: any) => m.is_primary) || members[0];
-
-      let distributed = 0;
-      const splits: { project_id: string; amount: number }[] = [];
-      for (const m of members) {
-        const share = (Number(m.allocation_percentage || 0) * multiplier) / 100;
-        const amt = Math.round(costEur * share * 100) / 100;
-        splits.push({ project_id: m.project_id, amount: amt });
-        distributed += amt;
-      }
-      const remainder = Math.round((costEur - distributed) * 100) / 100;
-      if (remainder > 0) {
-        const ps = splits.find((s) => s.project_id === primary.project_id);
-        if (ps) ps.amount = Math.round((ps.amount + remainder) * 100) / 100;
-      }
-      for (const s of splits) {
-        laborCostByProject[s.project_id] = (laborCostByProject[s.project_id] || 0) + s.amount;
-      }
-    }
+    // Pool-based overhead: general_expenses split across resources with salary>0
+    const allocation = calculateLaborCostAllocation({
+      monthlyCosts: monthlyCosts as any,
+      projectMembers: projectMembers as any,
+      generalExpenses: generalExpenses as any,
+    });
+    const laborCostByProject = allocation.laborCostByProject;
 
     // exclude archived/cancelled
     const visible = projects.filter((p: any) => !["archived", "cancelled"].includes(p.status));
@@ -188,7 +167,7 @@ export function ProjectFinancialsTable() {
         revenue, cost, profit, margin,
       };
     });
-  }, [projects, timeEntries, expenseEntries, monthlyCosts, projectMembers, oneTimeRevenues]);
+  }, [projects, timeEntries, expenseEntries, monthlyCosts, projectMembers, oneTimeRevenues, generalExpenses]);
 
   // ── sorting ──
   const [sortKey, setSortKey] = useState<SortKey>("revenue");

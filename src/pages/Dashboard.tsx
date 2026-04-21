@@ -201,54 +201,22 @@ export default function Dashboard() {
              mcDate <= new Date(toDate.getFullYear(), toDate.getMonth(), 1);
     });
 
-    // Build labor cost per project from resource_monthly_costs + project_members
-    const laborCostByProject: Record<string, number> = {};
-    const laborCostByMonth: Record<string, number> = {}; // key = "YYYY-MM"
+    // Filter general_expenses by period (year/month within range)
+    const filteredGeneralExpenses = generalExpenses.filter((ge: any) => {
+      const geDate = new Date(ge.year, ge.month - 1, 1);
+      return geDate >= new Date(fromDate.getFullYear(), fromDate.getMonth(), 1) &&
+             geDate <= new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+    });
 
-    for (const mc of filteredMonthlyCosts) {
-      const salary = Number(mc.amount || 0);
-      const overhead = Number(mc.overhead || 0); // overhead is stored in EUR
-      if (salary <= 0 && overhead <= 0) continue;
-      const dateStr = `${mc.year}-${String(mc.month).padStart(2, "0")}-15`;
-      const salaryEur = toEur(salary, mc.currency || "EUR", dateStr);
-      const costEur = salaryEur + overhead;
-      const monthKey = `${mc.year}-${String(mc.month).padStart(2, "0")}`;
-      const mcMonthStart = new Date(mc.year, mc.month - 1, 1);
-      const mcMonthEnd = new Date(mc.year, mc.month, 0);
-
-      // Find active project_members for this resource in this month
-      const members = projectMembers.filter((pm: any) =>
-        pm.resource_id === mc.resource_id &&
-        (!pm.start_date || new Date(pm.start_date) <= mcMonthEnd) &&
-        (!pm.end_date || new Date(pm.end_date) >= mcMonthStart)
-      );
-      if (members.length === 0) continue;
-
-      const totalAlloc = members.reduce((s: number, m: any) => s + Number(m.allocation_percentage || 0), 0);
-      if (totalAlloc <= 0) continue;
-      const multiplier = totalAlloc > 100 ? 100 / totalAlloc : 1;
-      const primaryMember = members.find((m: any) => m.is_primary) || members[0];
-
-      let distributed = 0;
-      const splits: { project_id: string; amount: number }[] = [];
-      for (const m of members) {
-        const share = (Number(m.allocation_percentage || 0) * multiplier) / 100;
-        const amt = Math.round(costEur * share * 100) / 100;
-        splits.push({ project_id: m.project_id, amount: amt });
-        distributed += amt;
-      }
-      const remainder = Math.round((costEur - distributed) * 100) / 100;
-      if (remainder > 0) {
-        const ps = splits.find((s) => s.project_id === primaryMember.project_id);
-        if (ps) ps.amount = Math.round((ps.amount + remainder) * 100) / 100;
-        else splits.push({ project_id: primaryMember.project_id, amount: remainder });
-      }
-
-      for (const s of splits) {
-        laborCostByProject[s.project_id] = (laborCostByProject[s.project_id] || 0) + s.amount;
-        laborCostByMonth[monthKey] = (laborCostByMonth[monthKey] || 0) + s.amount;
-      }
-    }
+    // Build labor cost per project using shared allocation engine
+    // (pool-based overhead: general_expenses / count of resources with salary>0)
+    const allocation = calculateLaborCostAllocation({
+      monthlyCosts: filteredMonthlyCosts as any,
+      projectMembers: projectMembers as any,
+      generalExpenses: filteredGeneralExpenses as any,
+    });
+    const laborCostByProject = allocation.laborCostByProject;
+    const laborCostByMonth = allocation.laborCostByMonth;
 
     // Non-salary expenses (exclude salary allocations to prevent double-counting with resource_monthly_costs)
     const nonSalaryExpenses = filteredExpenses.filter((e: any) => {

@@ -21,6 +21,7 @@ import {
   LineChart, Line, Legend, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
 import { ProjectFinancialsTable } from "@/components/dashboard/ProjectFinancialsTable";
+import { calculateLaborCostAllocation } from "@/lib/labor-cost-allocation";
 
 // ── helpers ──
 const fmt = fmtEur;
@@ -157,6 +158,16 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase.from("one_time_revenues")
         .select("project_id, revenue_month, amount, currency");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: generalExpenses = [] } = useQuery({
+    queryKey: ["dash-general-expenses"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("general_expenses")
+        .select("amount, currency, year, month");
       if (error) throw error;
       return data;
     },

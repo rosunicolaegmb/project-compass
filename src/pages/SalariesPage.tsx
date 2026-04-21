@@ -172,25 +172,20 @@ export default function SalariesPage() {
     setOverheads(ohMap);
   }, [existingCosts, resources]);
 
-  // Auto-populate overhead for resources with amount > 0
+  // Force-recalculate overhead for ALL resources with amount > 0.
+  // Pool-based model: every eligible resource gets exactly pool/N.
+  // Any stale value in DB is overwritten on next Save.
   useEffect(() => {
-    if (calculatedOverhead === 0) return;
     setOverheads((prev) => {
       const next = { ...prev };
+      const ohValue = calculatedOverhead > 0 ? calculatedOverhead.toFixed(2) : "";
       resources.forEach((r) => {
         const amt = Number(amounts[r.id] || 0);
-        if (amt > 0) {
-          const existing = existingCosts?.find((c) => c.resource_id === r.id);
-          if (!existing || Number(existing.overhead) === 0) {
-            next[r.id] = calculatedOverhead.toFixed(2);
-          }
-        } else {
-          next[r.id] = "";
-        }
+        next[r.id] = amt > 0 ? ohValue : "";
       });
       return next;
     });
-  }, [calculatedOverhead, resources, amounts, existingCosts]);
+  }, [calculatedOverhead, resources, amounts]);
 
   const handleSave = async () => {
     setSaving(true);

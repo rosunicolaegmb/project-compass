@@ -102,10 +102,11 @@ export default function Expenses() {
   }, [expenses, search, filterProject, filterCategory, filterStatus, filterMonth]);
 
   const stats = useMemo(() => {
-    const total = filtered.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    const total = filtered.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || "EUR", e.expense_date), 0);
     const pending = filtered.filter((e: any) => e.approval_status === "pending");
-    const pendingAmt = pending.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-    const billable = filtered.filter((e: any) => e.is_billable).reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    const pendingAmt = pending.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || "EUR", e.expense_date), 0);
+    const billable = filtered.filter((e: any) => e.is_billable)
+      .reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || "EUR", e.expense_date), 0);
     return { total, pendingCount: pending.length, pendingAmt, billable };
   }, [filtered]);
 
@@ -118,7 +119,13 @@ export default function Expenses() {
     onError: (err: Error) => toast.error(`Failed to delete expense: ${err.message}`),
   });
 
-  const fmtCurrency = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  const fmtRowAmount = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "EUR", maximumFractionDigits: 2 }).format(amount);
+    } catch {
+      return `${(currency || "EUR")} ${amount.toFixed(2)}`;
+    }
+  };
 
   const handleExport = () => {
     const rows = filtered.map((e: any) => [

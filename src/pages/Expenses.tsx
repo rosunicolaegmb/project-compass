@@ -18,6 +18,7 @@ import { exportToCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { toEur, fmtEur, loadConversionRates } from "@/lib/currency";
 
 const CATEGORY_LABELS: Record<string, string> = {
   travel: "Travel", software: "Software", equipment: "Equipment",

@@ -234,7 +234,7 @@ export default function Expenses() {
                 <TableCell>{e.projects?.name || "—"}</TableCell>
                 <TableCell className="hidden md:table-cell">{CATEGORY_LABELS[e.category] || e.category}</TableCell>
                 <TableCell className="max-w-[200px] truncate hidden lg:table-cell">{e.description || "—"}</TableCell>
-                <TableCell className="text-right font-medium tabular-nums">{fmtCurrency(Number(e.amount))}</TableCell>
+                <TableCell className="text-right font-medium tabular-nums">{fmtRowAmount(Number(e.amount), e.currency || "EUR")}</TableCell>
                 <TableCell><StatusBadge status={e.approval_status === "rejected" ? "at-risk" : e.approval_status} /></TableCell>
                 {canEdit && (
                   <TableCell>

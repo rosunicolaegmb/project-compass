@@ -74,7 +74,8 @@ function getPeriodRange(period: Period, selectedMonth: number, selectedYear: num
 export default function Dashboard() {
   const { isReporter } = useAuth();
   const now = new Date();
-  const [period, setPeriod] = useState<Period>("monthly");
+  const [period, setPeriod] = useState<Period>("yearly");
+  const [showAllAttention, setShowAllAttention] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-based
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
@@ -323,20 +324,58 @@ export default function Dashboard() {
         margin: d.revenue > 0 ? ((d.revenue - d.cost) / d.revenue) * 100 : 0,
       }));
 
-    // Portfolio split
-    const fpProjects = projects.filter((p: any) => p.project_type === "fixed_price");
-    const tmProjects = projects.filter((p: any) => p.project_type === "time_and_materials");
+    // Portfolio split — revenue per project type for the current period
+    const revenueByProject: Record<string, number> = {};
+    filteredTime.forEach((t: any) => {
+      if (!t.is_billable) return;
+      revenueByProject[t.project_id] = (revenueByProject[t.project_id] || 0)
+        + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date);
+    });
+    filteredOneTimeRevenues.forEach((r: any) => {
+      revenueByProject[r.project_id] = (revenueByProject[r.project_id] || 0)
+        + toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month);
+    });
+    const splitFor = (type: string) => {
+      const ps = projects.filter((p: any) => p.project_type === type);
+      return {
+        count: ps.length,
+        revenue: ps.reduce((s: number, p: any) => s + (revenueByProject[p.id] || 0), 0),
+      };
+    };
+    const tm = splitFor("time_and_materials");
+    const fp = splitFor("fixed_price");
+    const sp = splitFor("support");
     const portfolioSplit = [
-      { name: "T&M", count: tmProjects.length, budget: tmProjects.reduce((s: number, p: any) => s + Number(p.total_budget || 0), 0) },
-      { name: "Fixed Price", count: fpProjects.length, budget: fpProjects.reduce((s: number, p: any) => s + Number(p.total_budget || 0), 0) },
+      { name: "T&M", count: tm.count, revenue: tm.revenue },
+      { name: "Fixed Price", count: fp.count, revenue: fp.revenue },
+      { name: "Support", count: sp.count, revenue: sp.revenue },
     ];
+
+    // ── Month-over-Month cost comparison: M-1 vs M-2 (last full month vs the one before) ──
+    const today = new Date();
+    const m1Date = new Date(today.getFullYear(), today.getMonth() - 1, 1); // last full month
+    const m2Date = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+    const sumSalary = (y: number, m: number) =>
+      monthlyCosts
+        .filter((mc: any) => mc.year === y && mc.month === m)
+        .reduce((s: number, mc: any) => s + toEur(Number(mc.amount || 0), mc.currency || 'EUR', `${y}-${String(m).padStart(2, '0')}-01`), 0);
+    const sumOverhead = (y: number, m: number) =>
+      generalExpenses
+        .filter((ge: any) => ge.year === y && ge.month === m)
+        .reduce((s: number, ge: any) => s + toEur(Number(ge.amount || 0), ge.currency || 'EUR', `${y}-${String(m).padStart(2, '0')}-01`), 0);
+    const momComparison = {
+      m1Label: `${MONTH_NAMES[m1Date.getMonth()]} ${m1Date.getFullYear()}`,
+      m2Label: `${MONTH_NAMES[m2Date.getMonth()]} ${m2Date.getFullYear()}`,
+      salary: { m1: sumSalary(m1Date.getFullYear(), m1Date.getMonth() + 1), m2: sumSalary(m2Date.getFullYear(), m2Date.getMonth() + 1) },
+      overhead: { m1: sumOverhead(m1Date.getFullYear(), m1Date.getMonth() + 1), m2: sumOverhead(m2Date.getFullYear(), m2Date.getMonth() + 1) },
+    };
 
     return {
       totalPlannedBudget, totalActualCost, totalForecastCost,
       totalActualRevenue, totalForecastRevenue, grossMargin,
       activeCount: activeProjects.length,
       overBudgetProjects, atRiskProjects, missingTimesheets,
-      top10Revenue, top10Erosion, monthlyTrends, portfolioSplit,
+      top10Revenue, top10Erosion, monthlyTrends, portfolioSplit, momComparison,
     };
   }, [projects, timeEntries, expenseEntries, forecasts, phases, period, selectedMonth, selectedYear, monthlyCosts, projectMembers, oneTimeRevenues, generalExpenses]);
 
@@ -511,28 +550,54 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Top 10 Margin Erosion */}
+        {/* Cost Trend MoM (replaces Margin Erosion) */}
         <Card className="shadow-sm lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <TrendingDown className="h-4 w-4 text-destructive" /> Margin Erosion
+              <BarChart3 className="h-4 w-4 text-primary" /> Cost Trend (MoM)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow><TableHead className="text-xs">Project</TableHead><TableHead className="text-xs text-right">Current</TableHead><TableHead className="text-xs text-right">Erosion</TableHead></TableRow>
+                <TableRow>
+                  <TableHead className="text-xs">Category</TableHead>
+                  <TableHead className="text-xs text-right">{metrics.momComparison.m2Label}</TableHead>
+                  <TableHead className="text-xs text-right">{metrics.momComparison.m1Label}</TableHead>
+                  <TableHead className="text-xs text-right">Δ</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
-                {metrics.top10Erosion.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground text-sm">No erosion detected</TableCell></TableRow>
-                ) : metrics.top10Erosion.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="text-sm font-medium max-w-[140px] truncate">{p.name}</TableCell>
-                    <TableCell className="text-right text-sm">{fmtPct(p.forecastMargin)}</TableCell>
-                    <TableCell className="text-right text-sm text-destructive font-medium">-{fmtPct(p.marginErosion)}</TableCell>
-                  </TableRow>
-                ))}
+                {[
+                  { label: "Salary", ...metrics.momComparison.salary },
+                  { label: "Overhead", ...metrics.momComparison.overhead },
+                ].map((row) => {
+                  const delta = row.m1 - row.m2;
+                  const pct = row.m2 > 0 ? (delta / row.m2) * 100 : 0;
+                  const up = delta > 0;
+                  return (
+                    <TableRow key={row.label}>
+                      <TableCell className="text-sm font-medium">{row.label}</TableCell>
+                      <TableCell className="text-right text-sm">{fmt(row.m2)}</TableCell>
+                      <TableCell className="text-right text-sm">{fmt(row.m1)}</TableCell>
+                      <TableCell className={cn("text-right text-sm font-medium flex items-center justify-end gap-1",
+                        up ? "text-destructive" : delta < 0 ? "text-success" : "text-muted-foreground")}>
+                        {delta !== 0 && (up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />)}
+                        {fmt(Math.abs(delta))} {row.m2 > 0 && <span className="text-xs opacity-70">({up ? "+" : ""}{pct.toFixed(1)}%)</span>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="bg-muted/40 font-semibold">
+                  <TableCell className="text-sm">Total</TableCell>
+                  <TableCell className="text-right text-sm">{fmt(metrics.momComparison.salary.m2 + metrics.momComparison.overhead.m2)}</TableCell>
+                  <TableCell className="text-right text-sm">{fmt(metrics.momComparison.salary.m1 + metrics.momComparison.overhead.m1)}</TableCell>
+                  <TableCell className={cn("text-right text-sm",
+                    (metrics.momComparison.salary.m1 + metrics.momComparison.overhead.m1) - (metrics.momComparison.salary.m2 + metrics.momComparison.overhead.m2) > 0
+                      ? "text-destructive" : "text-success")}>
+                    {fmt(Math.abs((metrics.momComparison.salary.m1 + metrics.momComparison.overhead.m1) - (metrics.momComparison.salary.m2 + metrics.momComparison.overhead.m2)))}
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </CardContent>
@@ -549,34 +614,43 @@ export default function Dashboard() {
                 <Pie data={metrics.portfolioSplit} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={4}>
                   <Cell fill="hsl(187, 72%, 40%)" />
                   <Cell fill="hsl(262, 60%, 55%)" />
+                  <Cell fill="hsl(38, 92%, 50%)" />
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n: string) => [`${v} projects`, n]} />
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-3 mt-2">
-              {metrics.portfolioSplit.map((s, i) => (
-                <div key={s.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: i === 0 ? "hsl(187, 72%, 40%)" : "hsl(262, 60%, 55%)" }} />
-                    <span className="text-sm text-muted-foreground">{s.name}</span>
+              {metrics.portfolioSplit.map((s, i) => {
+                const colors = ["hsl(187, 72%, 40%)", "hsl(262, 60%, 55%)", "hsl(38, 92%, 50%)"];
+                return (
+                  <div key={s.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: colors[i] }} />
+                      <span className="text-sm text-muted-foreground">{s.name}</span>
+                    </div>
+                    <div className="text-right leading-tight">
+                      <div className="text-sm font-semibold">{s.count} projects</div>
+                      <div className="text-xs text-muted-foreground">{fmt(s.revenue)} revenue</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-semibold">{s.count} projects</span>
-                    <span className="text-xs text-muted-foreground ml-2">{fmt(s.budget)}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* ── Row 5: At-risk projects list ── */}
-      {(metrics.overBudgetProjects.length > 0 || metrics.atRiskProjects.length > 0) && (
+      {(metrics.overBudgetProjects.length > 0 || metrics.atRiskProjects.length > 0) && (() => {
+        const allAttention = [...new Map([...metrics.overBudgetProjects, ...metrics.atRiskProjects].map((p) => [p.id, p])).values()];
+        const visible = showAllAttention ? allAttention : allAttention.slice(0, 5);
+        const hiddenCount = allAttention.length - visible.length;
+        return (
         <Card className="shadow-sm border-warning/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
               <AlertTriangle className="h-4 w-4 text-warning" /> Attention Required
+              <span className="ml-1 text-xs font-normal text-muted-foreground">({allAttention.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -594,11 +668,11 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...new Map([...metrics.overBudgetProjects, ...metrics.atRiskProjects].map((p) => [p.id, p])).values()].map((p) => (
+                {visible.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="text-sm font-medium">{p.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{p.client}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{p.type === "fixed_price" ? "FP" : "T&M"}</Badge></TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{p.type === "fixed_price" ? "FP" : p.type === "support" ? "SP" : "T&M"}</Badge></TableCell>
                     <TableCell className="text-right text-sm">{fmt(p.budget)}</TableCell>
                     <TableCell className="text-right text-sm">{fmt(p.cost)}</TableCell>
                     <TableCell className={cn("text-right text-sm font-medium", p.budgetUsed > 90 ? "text-destructive" : p.budgetUsed > 75 ? "text-warning" : "")}>{fmtPct(p.budgetUsed)}</TableCell>
@@ -614,9 +688,20 @@ export default function Dashboard() {
                 ))}
               </TableBody>
             </Table>
+            {allAttention.length > 5 && (
+              <div className="border-t border-border p-2 flex justify-center">
+                <button
+                  onClick={() => setShowAllAttention((v) => !v)}
+                  className="text-xs font-medium text-primary hover:underline px-3 py-1"
+                >
+                  {showAllAttention ? "Show less" : `Show all (${hiddenCount} more)`}
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
 
       {/* ── Per-project financials ── */}
       <ProjectFinancialsTable />

@@ -158,9 +158,9 @@ export default function Expenses() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Expenses" value={fmtCurrency(stats.total)} icon={DollarSign} />
-        <StatCard title="Pending Approval" value={`${stats.pendingCount} (${fmtCurrency(stats.pendingAmt)})`} icon={Clock} />
-        <StatCard title="Billable Expenses" value={fmtCurrency(stats.billable)} icon={Receipt} />
+        <StatCard title="Total Expenses" value={fmtEur(stats.total)} icon={DollarSign} />
+        <StatCard title="Pending Approval" value={`${stats.pendingCount} (${fmtEur(stats.pendingAmt)})`} icon={Clock} />
+        <StatCard title="Billable Expenses" value={fmtEur(stats.billable)} icon={Receipt} />
         <StatCard title="Entries" value={String(filtered.length)} icon={TrendingUp} />
       </div>
 

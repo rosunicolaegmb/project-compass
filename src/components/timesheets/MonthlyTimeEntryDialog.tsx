@@ -399,10 +399,59 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
-            <div className="space-y-3">
-              <FormField control={form.control} name="is_billable" render={({ field }) => (
+            {/* Optional global bill rate override */}
+            <div className="space-y-3 rounded-md border p-3">
+              <FormField control={form.control} name="override_rate" render={({ field }) => (
                 <FormItem className="flex items-center gap-3">
-                  <FormLabel className="mb-0">Billable</FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-0.5">
+                    <FormLabel className="mb-0">Override bill rate for all selected resources</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      If off, each resource uses its own default bill rate &amp; currency from profile.
+                    </p>
+                  </div>
+                </FormItem>
+              )} />
+
+              {watchOverrideRate && (
+                <>
+                  <FormField control={form.control} name="currency" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rate Currency</FormLabel>
+                      <FormControl>
+                        <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField control={form.control} name="bill_rate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bill Rate ({sym}/hr)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field}
+                            onFocus={() => setRateEditSource("bill")} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="daily_rate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Daily Rate ({sym}/day)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field}
+                            onFocus={() => setRateEditSource("daily")} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </>
+              )}
+            </div>
+
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>

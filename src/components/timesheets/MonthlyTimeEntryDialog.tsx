@@ -21,9 +21,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import {
   startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse,
 } from "date-fns";
+
+const HOURS_PER_DAY = 8;
 
 const schema = z.object({
   resource_ids: z.array(z.string()).min(1, "Select at least one resource"),
@@ -35,6 +39,10 @@ const schema = z.object({
   description: z.string().max(500).optional(),
   skip_weekends: z.boolean().default(true),
   skip_existing: z.boolean().default(true),
+  override_rate: z.boolean().default(false),
+  bill_rate: z.coerce.number().min(0).optional(),
+  daily_rate: z.coerce.number().min(0).optional(),
+  currency: z.string().default("EUR"),
 });
 
 type FormData = z.infer<typeof schema>;

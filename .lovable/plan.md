@@ -1,60 +1,48 @@
 
 
-## Multi-Resource Selection în Log Month
+## Investigație Admiral Money Grow Team — €114K vs €206,620 așteptat
 
-### Schimbare propusă
-În dialogul **Log Full Month** (Timesheets → "Log Month"), câmpul **Resource** devine **multi-select**, permițând pontarea simultană pentru mai multe resurse cu aceleași date (zile, ore/zi, billable, notes).
+### Date confirmate din DB (yearly 2026)
 
-Pentru fiecare resursă selectată se vor crea time entries identice ca structură, dar cu **rate-uri proprii** (bill_rate / cost_rate / currency luate din profilul fiecărei resurse), păstrând logica de calcul revenue & cost neschimbată.
+| Metric | Valoare |
+|---|---|
+| Entries billable | 489 |
+| Total hours | 3,912 |
+| Currency | GBP (uniform) |
+| Revenue native | **£179,670** |
+| Rate GBP→EUR (Jan-Dec 2026) | 1.15 (uniform) |
+| Revenue EUR așteptat | **€206,620** |
+| Distribuție | doar Jan/Feb/Mar 2026 (£59,890/lună) |
 
-### UX
+### Ce NU este cauza
 
-```text
-Project *        [Select project ▾]
-Resources *      [☑ Alice  ☑ Bob  ☐ Carol  ...]   ← multi-select cu checkbox
-                 (filtrate după alocările proiectului)
-Phase            [Select phase ▾]
-Month            [2026-02]
-[Calendar - selectare zile]
-Hours per day *  [8]
-☑ Billable
-☑ Skip weekends
-☑ Skip days with existing entries
-Notes            [...]
+- ❌ Inversare rate (1/1.15 = 0.87 → ar da €156K, nu €114K)
+- ❌ Date inconsistente (toate entries sunt GBP, toate rate-urile sunt 1.15)
+- ❌ Lipsă rate-uri (toate cele 12 luni au rate setat)
+- ❌ Entries lipsă (489 entries × media rate ≈ £179,670 = match)
 
-Summary:
-  Resources selected: 3
-  Days selected: 20
-  Total entries: 60  (3 × 20)
-  Total hours: 480
-```
+### Ce nu am putut confirma (am nevoie de input)
 
-Reporter (rol non-admin) rămâne forțat la propria resursă (single, disabled) — același comportament ca azi.
+Numărul **€114K** nu se obține matematic din nicio combinație normală de rate × £179,670. Înainte să propun un fix, trebuie să știu **exact unde** apare 114K, pentru că Dashboard-ul are mai multe widget-uri care arată sume per proiect:
 
-### Modificări tehnice
+### Întrebări pentru tine
 
-**Fișier**: `src/components/timesheets/MonthlyTimeEntryDialog.tsx`
+1. **Unde exact** vezi €114K?
+   - (a) **Dashboard → tabelul "Project Financials"**, coloana "Projected Revenue", filtru Yearly 2026
+   - (b) **Dashboard → KPI cards** (Total Revenue / Cost / Margin)
+   - (c) **Project Detail page** (`/projects/aac5cae4...`)
+   - (d) Altundeva (Reports? Forecasting?)
 
-1. **Schema**: înlocuim `resource_id: string` cu `resource_ids: string[].min(1)`. Eliminăm câmpurile globale `bill_rate` / `daily_rate` / `currency` din formular (rate-ul devine per-resursă, nu global).
-2. **UI Resources**: înlocuim `<Select>` cu o listă scrollabilă de `<Checkbox>` (sau popover cu search dacă sunt multe resurse), filtrată după `projectMembers` pentru proiectul ales. Buton "Select all / Deselect all" pentru resurse.
-3. **Reporter mode**: dacă `reporterResourceId` e setat → lista e disabled, doar resursa proprie bifată.
-4. **Mutation** (insert):
-   - Pentru fiecare `resource_id` din selecție:
-     - Iau `bill_rate` = `resource.default_bill_rate`, `currency` = `resource.currency` (fallback EUR)
-     - Aplic skip_existing per (resource, project) — query cu `.in("resource_id", selectedIds)` apoi grupez per resursă
-     - Construiesc batch-uri de inserare (`resource_id`, `project_id`, `phase_id`, `entry_date`, `hours`, `is_billable`, `description`, `bill_rate`, `currency`)
-   - Insert în batch-uri de 50 (la fel ca acum)
-5. **Toast result**: "Created N entries across M resources (K days skipped — already existed)"
-6. **Summary card**: afișez `Resources × Days = Total entries` și `Total hours = entries × hours/day`
+2. Coloana exactă: e **Revenue**, **Cost**, **Profit** sau **Budget**?
 
-### Ce NU se schimbă
-- Logica de calcul **revenue** (bill_rate × hours) și **cost** (pool overhead + salariu din `labor-cost-allocation.ts`) rămân identice. Bill_rate-ul scris în fiecare time entry este preluat tot din `resource.default_bill_rate`, ca în varianta single-resource actuală.
-- Componenta `TimeEntryFormDialog` (single entry) rămâne neatinsă.
-- Edge function `allocate-monthly-costs` rămâne neatinsă.
-- Pool-ul de overhead (general_expenses ÷ N resurse cu salary>0) rămâne identic.
+3. Poți face un **screenshot** sau citi exact tooltip-ul/numărul afișat? (ex: "€114K" vs "€114,000" vs "€-114K")
 
-### Edge cases
-- Dacă un proiect nu are membri alocați → afișez toate resursele (comportament actual păstrat).
-- Dacă o resursă selectată nu are `default_bill_rate` → bill_rate = `null` (la fel ca azi când lipsește).
-- `skip_existing` se aplică independent pentru fiecare resursă (o resursă poate sări 5 zile, alta 0).
+### Plan de acțiune după ce confirm
+
+Odată ce știu **widget-ul exact**:
+1. Reproduc query-ul + `useMemo`-ul din componenta respectivă cu datele DB
+2. Identific dacă e: (a) race condition `loadConversionRates`, (b) filtru ascuns (status, deleted, allocation), (c) bug în `calculateLaborCostAllocation` care contaminează revenue, (d) altceva
+3. Propun fix țintit (un singur fișier, fără side-effects pe alte calcule)
+
+**Nu modific nimic până nu confirm cifra exactă și locul.**
 

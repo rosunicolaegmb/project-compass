@@ -220,8 +220,11 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
       for (const rid of values.resource_ids) {
         const resource = resources.find((r: any) => r.id === rid);
-        const billRate = resource?.default_bill_rate != null ? Number(resource.default_bill_rate) : null;
-        const currency = resource?.currency || "EUR";
+        const useOverride = values.override_rate && values.bill_rate != null && values.bill_rate > 0;
+        const billRate = useOverride
+          ? Number(values.bill_rate)
+          : (resource?.default_bill_rate != null ? Number(resource.default_bill_rate) : null);
+        const currency = useOverride ? (values.currency || "EUR") : (resource?.currency || "EUR");
 
         const skipSet = existingByResource[rid] || new Set<string>();
         const newDates = dates.filter(d => !skipSet.has(d));

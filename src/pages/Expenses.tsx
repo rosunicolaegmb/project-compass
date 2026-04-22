@@ -18,6 +18,7 @@ import { exportToCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { toEur, fmtEur, loadConversionRates } from "@/lib/currency";
 
 const CATEGORY_LABELS: Record<string, string> = {
   travel: "Travel", software: "Software", equipment: "Equipment",
@@ -39,6 +40,8 @@ export default function Expenses() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+
+  useEffect(() => { loadConversionRates(); }, []);
 
   useEffect(() => {
     saveFilters("expenses", { search, project: filterProject, category: filterCategory, status: filterStatus, month: filterMonth });
@@ -99,10 +102,11 @@ export default function Expenses() {
   }, [expenses, search, filterProject, filterCategory, filterStatus, filterMonth]);
 
   const stats = useMemo(() => {
-    const total = filtered.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    const total = filtered.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || "EUR", e.expense_date), 0);
     const pending = filtered.filter((e: any) => e.approval_status === "pending");
-    const pendingAmt = pending.reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
-    const billable = filtered.filter((e: any) => e.is_billable).reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    const pendingAmt = pending.reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || "EUR", e.expense_date), 0);
+    const billable = filtered.filter((e: any) => e.is_billable)
+      .reduce((s: number, e: any) => s + toEur(Number(e.amount || 0), e.currency || "EUR", e.expense_date), 0);
     return { total, pendingCount: pending.length, pendingAmt, billable };
   }, [filtered]);
 
@@ -115,7 +119,13 @@ export default function Expenses() {
     onError: (err: Error) => toast.error(`Failed to delete expense: ${err.message}`),
   });
 
-  const fmtCurrency = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  const fmtRowAmount = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "EUR", maximumFractionDigits: 2 }).format(amount);
+    } catch {
+      return `${(currency || "EUR")} ${amount.toFixed(2)}`;
+    }
+  };
 
   const handleExport = () => {
     const rows = filtered.map((e: any) => [
@@ -148,9 +158,9 @@ export default function Expenses() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Expenses" value={fmtCurrency(stats.total)} icon={DollarSign} />
-        <StatCard title="Pending Approval" value={`${stats.pendingCount} (${fmtCurrency(stats.pendingAmt)})`} icon={Clock} />
-        <StatCard title="Billable Expenses" value={fmtCurrency(stats.billable)} icon={Receipt} />
+        <StatCard title="Total Expenses" value={fmtEur(stats.total)} icon={DollarSign} />
+        <StatCard title="Pending Approval" value={`${stats.pendingCount} (${fmtEur(stats.pendingAmt)})`} icon={Clock} />
+        <StatCard title="Billable Expenses" value={fmtEur(stats.billable)} icon={Receipt} />
         <StatCard title="Entries" value={String(filtered.length)} icon={TrendingUp} />
       </div>
 
@@ -224,7 +234,7 @@ export default function Expenses() {
                 <TableCell>{e.projects?.name || "—"}</TableCell>
                 <TableCell className="hidden md:table-cell">{CATEGORY_LABELS[e.category] || e.category}</TableCell>
                 <TableCell className="max-w-[200px] truncate hidden lg:table-cell">{e.description || "—"}</TableCell>
-                <TableCell className="text-right font-medium tabular-nums">{fmtCurrency(Number(e.amount))}</TableCell>
+                <TableCell className="text-right font-medium tabular-nums">{fmtRowAmount(Number(e.amount), e.currency || "EUR")}</TableCell>
                 <TableCell><StatusBadge status={e.approval_status === "rejected" ? "at-risk" : e.approval_status} /></TableCell>
                 {canEdit && (
                   <TableCell>

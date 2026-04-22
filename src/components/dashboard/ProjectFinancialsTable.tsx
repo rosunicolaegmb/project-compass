@@ -57,39 +57,33 @@ export function ProjectFinancialsTable() {
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["pft-time", from, to],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("time_entries")
+    queryFn: () => fetchAllRowsPft<any>(() =>
+      supabase.from("time_entries")
         .select("hours, bill_rate, is_billable, project_id, entry_date, currency")
         .is("deleted_at", null)
-        .gte("entry_date", from).lte("entry_date", to);
-      if (error) throw error;
-      return data;
-    },
+        .gte("entry_date", from).lte("entry_date", to)
+    ),
   });
 
   const { data: expenseEntries = [] } = useQuery({
     queryKey: ["pft-expenses", from, to],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("expense_entries")
+    queryFn: () => fetchAllRowsPft<any>(() =>
+      supabase.from("expense_entries")
         .select("amount, project_id, expense_date, currency, description")
         .is("deleted_at", null)
-        .gte("expense_date", from).lte("expense_date", to);
-      if (error) throw error;
-      return data;
-    },
+        .gte("expense_date", from).lte("expense_date", to)
+    ),
   });
 
   const { data: monthlyCosts = [] } = useQuery({
     queryKey: ["pft-mc", year, view, month],
-    queryFn: async () => {
+    queryFn: () => fetchAllRowsPft<any>(() => {
       let q = supabase.from("resource_monthly_costs")
         .select("resource_id, year, month, amount, overhead, currency")
         .eq("year", year);
       if (view === "monthly") q = q.eq("month", month + 1);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data;
-    },
+      return q;
+    }),
   });
 
   const { data: generalExpenses = [] } = useQuery({
@@ -107,25 +101,20 @@ export function ProjectFinancialsTable() {
 
   const { data: projectMembers = [] } = useQuery({
     queryKey: ["pft-pm"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("project_members")
-        .select("resource_id, project_id, allocation_percentage, is_primary, start_date, end_date");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchAllRowsPft<any>(() =>
+      supabase.from("project_members")
+        .select("resource_id, project_id, allocation_percentage, is_primary, start_date, end_date")
+    ),
   });
 
   const { data: oneTimeRevenues = [] } = useQuery({
     queryKey: ["pft-otr", from, to],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("one_time_revenues")
+    queryFn: () => fetchAllRowsPft<any>(() =>
+      supabase.from("one_time_revenues")
         .select("project_id, revenue_month, amount, currency")
-        .gte("revenue_month", from).lte("revenue_month", to);
-      if (error) throw error;
-      return data;
-    },
+        .gte("revenue_month", from).lte("revenue_month", to)
+    ),
   });
-
   // ── compute per-project metrics (shared allocation engine) ──
   const rows = useMemo(() => {
     // Pool-based overhead: general_expenses split across resources with salary>0

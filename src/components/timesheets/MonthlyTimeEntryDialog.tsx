@@ -452,6 +452,10 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               )}
             </div>
 
+            <div className="space-y-3">
+              <FormField control={form.control} name="is_billable" render={({ field }) => (
+                <FormItem className="flex items-center gap-3">
+                  <FormLabel className="mb-0">Billable</FormLabel>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>

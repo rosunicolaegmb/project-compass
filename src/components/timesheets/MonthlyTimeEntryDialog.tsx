@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,25 +21,18 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { CurrencySelect } from "@/components/CurrencySelect";
-import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import {
   startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse,
 } from "date-fns";
 
-const HOURS_PER_DAY = 8;
-
 const schema = z.object({
-  resource_id: z.string().min(1, "Resource is required"),
+  resource_ids: z.array(z.string()).min(1, "Select at least one resource"),
   project_id: z.string().min(1, "Project is required"),
   phase_id: z.string().optional(),
   month: z.string().min(1, "Month is required"),
   hours: z.coerce.number().min(0.25, "Minimum 0.25 hours").max(24, "Maximum 24 hours"),
   is_billable: z.boolean().default(true),
   description: z.string().max(500).optional(),
-  bill_rate: z.coerce.number().min(0).optional(),
-  daily_rate: z.coerce.number().min(0).optional(),
-  currency: z.string().default("EUR"),
   skip_weekends: z.boolean().default(true),
   skip_existing: z.boolean().default(true),
 });
@@ -79,10 +72,10 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      resource_id: "", project_id: "", phase_id: "",
+      resource_ids: [], project_id: "", phase_id: "",
       month: format(new Date(), "yyyy-MM"),
       hours: 8, is_billable: true, description: "",
-      bill_rate: 0, daily_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
+      skip_weekends: true, skip_existing: true,
     },
   });
 
@@ -90,10 +83,11 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
     if (open) {
       const defaultMonth = format(new Date(), "yyyy-MM");
       form.reset({
-        resource_id: reporterResourceId || "", project_id: "", phase_id: "",
+        resource_ids: reporterResourceId ? [reporterResourceId] : [],
+        project_id: "", phase_id: "",
         month: defaultMonth,
         hours: 8, is_billable: true, description: "",
-        bill_rate: 0, daily_rate: 0, currency: "EUR", skip_weekends: true, skip_existing: true,
+        skip_weekends: true, skip_existing: true,
       });
       setSelectedDates(computeWorkingDays(defaultMonth, true));
     }
@@ -102,9 +96,8 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   const watchProjectId = form.watch("project_id");
   const watchMonth = form.watch("month");
   const watchSkipWeekends = form.watch("skip_weekends");
-  const watchCurrency = form.watch("currency");
+  const watchResourceIds = form.watch("resource_ids");
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
-  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
 
   // Filter resources by project allocation
   const filteredResources = useMemo(() => {
@@ -130,36 +123,20 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
     }
   }, [watchMonth]);
 
-  const totalHours = selectedDates.length * (form.watch("hours") || 0);
+  const totalEntries = selectedDates.length * (watchResourceIds?.length || 0);
+  const totalHours = totalEntries * (form.watch("hours") || 0);
 
-  const watchResourceId = form.watch("resource_id");
+  // Prune resource selection when project changes (keep only allocated ones)
   useEffect(() => {
-    if (watchResourceId) {
-      const resource = resources.find((r: any) => r.id === watchResourceId);
-      if (resource) {
-        const br = Number(resource.default_bill_rate || 0);
-        form.setValue("bill_rate", br);
-        form.setValue("daily_rate", br * HOURS_PER_DAY);
-        form.setValue("currency", resource.currency || "EUR");
-      }
+    if (reporterResourceId) return;
+    if (!watchProjectId) return;
+    const allowed = new Set(filteredResources.map((r: any) => r.id));
+    const current = form.getValues("resource_ids") || [];
+    const pruned = current.filter(id => allowed.has(id));
+    if (pruned.length !== current.length) {
+      form.setValue("resource_ids", pruned);
     }
-  }, [watchResourceId, resources, form]);
-
-  const [rateEditSource, setRateEditSource] = useState<"bill" | "daily" | null>(null);
-  const watchBillRate = form.watch("bill_rate");
-  const watchDailyRate = form.watch("daily_rate");
-
-  useEffect(() => {
-    if (rateEditSource === "bill" && watchBillRate != null) {
-      form.setValue("daily_rate", Number((watchBillRate * HOURS_PER_DAY).toFixed(2)));
-    }
-  }, [watchBillRate, rateEditSource, form]);
-
-  useEffect(() => {
-    if (rateEditSource === "daily" && watchDailyRate != null) {
-      form.setValue("bill_rate", Number((watchDailyRate / HOURS_PER_DAY).toFixed(2)));
-    }
-  }, [watchDailyRate, rateEditSource, form]);
+  }, [watchProjectId, filteredResources, form, reporterResourceId]);
 
   const handleSelectAll = () => {
     setSelectedDates(computeWorkingDays(watchMonth, watchSkipWeekends));
@@ -169,60 +146,98 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
     setSelectedDates([]);
   };
 
+  const toggleResource = (id: string, checked: boolean) => {
+    const current = form.getValues("resource_ids") || [];
+    if (checked) {
+      if (!current.includes(id)) form.setValue("resource_ids", [...current, id], { shouldValidate: true });
+    } else {
+      form.setValue("resource_ids", current.filter(x => x !== id), { shouldValidate: true });
+    }
+  };
+
+  const handleSelectAllResources = () => {
+    form.setValue("resource_ids", filteredResources.map((r: any) => r.id), { shouldValidate: true });
+  };
+  const handleDeselectAllResources = () => {
+    form.setValue("resource_ids", [], { shouldValidate: true });
+  };
+
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
       if (selectedDates.length === 0) throw new Error("No days selected for this month.");
+      if (values.resource_ids.length === 0) throw new Error("Select at least one resource.");
 
       const dates = selectedDates.map(d => format(d, "yyyy-MM-dd"));
 
-      let existingDates = new Set<string>();
+      // Fetch existing entries for all selected resources in one query
+      let existingByResource: Record<string, Set<string>> = {};
       if (values.skip_existing) {
-        const { data: existing } = await supabase
+        const { data: existing, error: existErr } = await supabase
           .from("time_entries")
-          .select("entry_date")
-          .eq("resource_id", values.resource_id)
+          .select("entry_date, resource_id")
+          .in("resource_id", values.resource_ids)
           .eq("project_id", values.project_id)
           .is("deleted_at", null)
           .in("entry_date", dates);
-
-        if (existing) {
-          existingDates = new Set(existing.map((e: any) => e.entry_date));
+        if (existErr) throw existErr;
+        for (const e of existing || []) {
+          const set = existingByResource[e.resource_id] ||= new Set<string>();
+          set.add(e.entry_date as string);
         }
       }
 
-      const newDates = dates.filter(d => !existingDates.has(d));
-      const skipCount = dates.length - newDates.length;
+      let totalCreated = 0;
+      let totalSkipped = 0;
+      let resourcesWithCreations = 0;
+      const allRows: any[] = [];
 
-      if (newDates.length === 0) {
-        throw new Error("All selected days already have time entries for this resource/project combination.");
+      for (const rid of values.resource_ids) {
+        const resource = resources.find((r: any) => r.id === rid);
+        const billRate = resource?.default_bill_rate != null ? Number(resource.default_bill_rate) : null;
+        const currency = resource?.currency || "EUR";
+
+        const skipSet = existingByResource[rid] || new Set<string>();
+        const newDates = dates.filter(d => !skipSet.has(d));
+        const skipped = dates.length - newDates.length;
+        totalSkipped += skipped;
+        if (newDates.length > 0) {
+          resourcesWithCreations += 1;
+          totalCreated += newDates.length;
+          for (const date of newDates) {
+            allRows.push({
+              resource_id: rid,
+              project_id: values.project_id,
+              phase_id: values.phase_id || null,
+              entry_date: date,
+              hours: values.hours,
+              is_billable: values.is_billable,
+              description: values.description || null,
+              bill_rate: billRate,
+              cost_rate: null,
+              currency,
+            });
+          }
+        }
+      }
+
+      if (allRows.length === 0) {
+        throw new Error("All selected days already have time entries for the selected resources.");
       }
 
       const batchSize = 50;
-      for (let i = 0; i < newDates.length; i += batchSize) {
-        const batch = newDates.slice(i, i + batchSize).map(date => ({
-          resource_id: values.resource_id,
-          project_id: values.project_id,
-          phase_id: values.phase_id || null,
-          entry_date: date,
-          hours: values.hours,
-          is_billable: values.is_billable,
-          description: values.description || null,
-          bill_rate: values.bill_rate || null,
-          cost_rate: null,
-          currency: values.currency,
-        }));
-
+      for (let i = 0; i < allRows.length; i += batchSize) {
+        const batch = allRows.slice(i, i + batchSize);
         const { error } = await supabase.from("time_entries").insert(batch);
         if (error) throw error;
       }
 
-      return { created: newDates.length, skipped: skipCount };
+      return { created: totalCreated, skipped: totalSkipped, resources: resourcesWithCreations };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["time-entries"] });
       const msg = result.skipped > 0
-        ? `Created ${result.created} entries (${result.skipped} days skipped — already existed)`
-        : `Created ${result.created} time entries`;
+        ? `Created ${result.created} entries across ${result.resources} resources (${result.skipped} skipped — already existed)`
+        : `Created ${result.created} entries across ${result.resources} resources`;
       toast.success(msg);
       onOpenChange(false);
     },
@@ -235,7 +250,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         <DialogHeader>
           <DialogTitle>Log Full Month</DialogTitle>
           <DialogDescription>
-            Create time entries for selected days in a month. Click days to toggle them.
+            Create time entries for selected days in a month, for one or more resources.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -243,7 +258,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
             <FormField control={form.control} name="project_id" render={({ field }) => (
               <FormItem>
                 <FormLabel>Project *</FormLabel>
-                <Select onValueChange={(v) => { field.onChange(v); form.setValue("phase_id", ""); form.setValue("resource_id", reporterResourceId || ""); }} value={field.value}>
+                <Select onValueChange={(v) => { field.onChange(v); form.setValue("phase_id", ""); }} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger></FormControl>
                   <SelectContent>
                     {projects.map((p: any) => (
@@ -255,17 +270,41 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="resource_id" render={({ field }) => (
+            <FormField control={form.control} name="resource_ids" render={() => (
               <FormItem>
-                <FormLabel>Resource *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={!!reporterResourceId}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select resource" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {filteredResources.map((r: any) => (
-                      <SelectItem key={r.id} value={r.id}>{r.display_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Resources *</FormLabel>
+                  {!reporterResourceId && (
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={handleSelectAllResources} disabled={!watchProjectId || filteredResources.length === 0}>
+                        Select All
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={handleDeselectAllResources}>
+                        Clear
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="rounded-md border p-2 max-h-48 overflow-y-auto space-y-1">
+                  {!watchProjectId ? (
+                    <p className="text-sm text-muted-foreground p-2">Select a project first to see resources.</p>
+                  ) : filteredResources.length === 0 ? (
+                    <p className="text-sm text-muted-foreground p-2">No resources available.</p>
+                  ) : filteredResources.map((r: any) => {
+                    const checked = watchResourceIds?.includes(r.id) || false;
+                    const disabled = !!reporterResourceId && r.id !== reporterResourceId;
+                    return (
+                      <label key={r.id} className={`flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
+                        <Checkbox
+                          checked={checked}
+                          disabled={disabled}
+                          onCheckedChange={(c) => toggleResource(r.id, !!c)}
+                        />
+                        <span className="text-sm">{r.display_name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
                 <FormMessage />
               </FormItem>
             )} />
@@ -330,41 +369,6 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="currency" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Rate Currency</FormLabel>
-                <FormControl>
-                  <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="bill_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bill Rate ({sym}/hr)</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field}
-                      onFocus={() => setRateEditSource("bill")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="daily_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Daily Rate ({sym}/day)</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field}
-                      onFocus={() => setRateEditSource("daily")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-
             <div className="space-y-3">
               <FormField control={form.control} name="is_billable" render={({ field }) => (
                 <FormItem className="flex items-center gap-3">
@@ -404,8 +408,16 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
             <div className="rounded-md bg-muted p-3 space-y-1">
               <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Resources selected</span>
+                <Badge variant="secondary">{watchResourceIds?.length || 0}</Badge>
+              </div>
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Days selected</span>
                 <Badge variant="secondary">{selectedDates.length} days</Badge>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total entries</span>
+                <span className="font-medium">{totalEntries.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total hours</span>
@@ -415,8 +427,8 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={mutation.isPending || selectedDates.length === 0}>
-                {mutation.isPending ? "Creating entries..." : `Log ${selectedDates.length} Days`}
+              <Button type="submit" disabled={mutation.isPending || selectedDates.length === 0 || (watchResourceIds?.length || 0) === 0}>
+                {mutation.isPending ? "Creating entries..." : `Log ${totalEntries} Entries`}
               </Button>
             </div>
           </form>

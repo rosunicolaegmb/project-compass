@@ -324,20 +324,58 @@ export default function Dashboard() {
         margin: d.revenue > 0 ? ((d.revenue - d.cost) / d.revenue) * 100 : 0,
       }));
 
-    // Portfolio split
-    const fpProjects = projects.filter((p: any) => p.project_type === "fixed_price");
-    const tmProjects = projects.filter((p: any) => p.project_type === "time_and_materials");
+    // Portfolio split — revenue per project type for the current period
+    const revenueByProject: Record<string, number> = {};
+    filteredTime.forEach((t: any) => {
+      if (!t.is_billable) return;
+      revenueByProject[t.project_id] = (revenueByProject[t.project_id] || 0)
+        + toEur(Number(t.hours || 0) * Number(t.bill_rate || 0), t.currency || 'EUR', t.entry_date);
+    });
+    filteredOneTimeRevenues.forEach((r: any) => {
+      revenueByProject[r.project_id] = (revenueByProject[r.project_id] || 0)
+        + toEur(Number(r.amount || 0), r.currency || 'EUR', r.revenue_month);
+    });
+    const splitFor = (type: string) => {
+      const ps = projects.filter((p: any) => p.project_type === type);
+      return {
+        count: ps.length,
+        revenue: ps.reduce((s: number, p: any) => s + (revenueByProject[p.id] || 0), 0),
+      };
+    };
+    const tm = splitFor("time_and_materials");
+    const fp = splitFor("fixed_price");
+    const sp = splitFor("support");
     const portfolioSplit = [
-      { name: "T&M", count: tmProjects.length, budget: tmProjects.reduce((s: number, p: any) => s + Number(p.total_budget || 0), 0) },
-      { name: "Fixed Price", count: fpProjects.length, budget: fpProjects.reduce((s: number, p: any) => s + Number(p.total_budget || 0), 0) },
+      { name: "T&M", count: tm.count, revenue: tm.revenue },
+      { name: "Fixed Price", count: fp.count, revenue: fp.revenue },
+      { name: "Support", count: sp.count, revenue: sp.revenue },
     ];
+
+    // ── Month-over-Month cost comparison: M-1 vs M-2 (last full month vs the one before) ──
+    const today = new Date();
+    const m1Date = new Date(today.getFullYear(), today.getMonth() - 1, 1); // last full month
+    const m2Date = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+    const sumSalary = (y: number, m: number) =>
+      monthlyCosts
+        .filter((mc: any) => mc.year === y && mc.month === m)
+        .reduce((s: number, mc: any) => s + toEur(Number(mc.amount || 0), mc.currency || 'EUR', `${y}-${String(m).padStart(2, '0')}-01`), 0);
+    const sumOverhead = (y: number, m: number) =>
+      generalExpenses
+        .filter((ge: any) => ge.year === y && ge.month === m)
+        .reduce((s: number, ge: any) => s + toEur(Number(ge.amount || 0), ge.currency || 'EUR', `${y}-${String(m).padStart(2, '0')}-01`), 0);
+    const momComparison = {
+      m1Label: `${MONTH_NAMES[m1Date.getMonth()]} ${m1Date.getFullYear()}`,
+      m2Label: `${MONTH_NAMES[m2Date.getMonth()]} ${m2Date.getFullYear()}`,
+      salary: { m1: sumSalary(m1Date.getFullYear(), m1Date.getMonth() + 1), m2: sumSalary(m2Date.getFullYear(), m2Date.getMonth() + 1) },
+      overhead: { m1: sumOverhead(m1Date.getFullYear(), m1Date.getMonth() + 1), m2: sumOverhead(m2Date.getFullYear(), m2Date.getMonth() + 1) },
+    };
 
     return {
       totalPlannedBudget, totalActualCost, totalForecastCost,
       totalActualRevenue, totalForecastRevenue, grossMargin,
       activeCount: activeProjects.length,
       overBudgetProjects, atRiskProjects, missingTimesheets,
-      top10Revenue, top10Erosion, monthlyTrends, portfolioSplit,
+      top10Revenue, top10Erosion, monthlyTrends, portfolioSplit, momComparison,
     };
   }, [projects, timeEntries, expenseEntries, forecasts, phases, period, selectedMonth, selectedYear, monthlyCosts, projectMembers, oneTimeRevenues, generalExpenses]);
 

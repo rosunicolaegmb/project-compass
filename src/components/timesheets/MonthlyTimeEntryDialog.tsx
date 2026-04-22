@@ -84,6 +84,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       month: format(new Date(), "yyyy-MM"),
       hours: 8, is_billable: true, description: "",
       skip_weekends: true, skip_existing: true,
+      override_rate: false, bill_rate: 0, daily_rate: 0, currency: "EUR",
     },
   });
 
@@ -96,6 +97,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         month: defaultMonth,
         hours: 8, is_billable: true, description: "",
         skip_weekends: true, skip_existing: true,
+        override_rate: false, bill_rate: 0, daily_rate: 0, currency: "EUR",
       });
       setSelectedDates(computeWorkingDays(defaultMonth, true));
     }
@@ -105,7 +107,24 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   const watchMonth = form.watch("month");
   const watchSkipWeekends = form.watch("skip_weekends");
   const watchResourceIds = form.watch("resource_ids");
+  const watchOverrideRate = form.watch("override_rate");
+  const watchCurrency = form.watch("currency");
+  const watchBillRate = form.watch("bill_rate");
+  const watchDailyRate = form.watch("daily_rate");
+  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
+
+  const [rateEditSource, setRateEditSource] = useState<"bill" | "daily" | null>(null);
+  useEffect(() => {
+    if (rateEditSource === "bill" && watchBillRate != null) {
+      form.setValue("daily_rate", Number((watchBillRate * HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchBillRate, rateEditSource, form]);
+  useEffect(() => {
+    if (rateEditSource === "daily" && watchDailyRate != null) {
+      form.setValue("bill_rate", Number((watchDailyRate / HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchDailyRate, rateEditSource, form]);
 
   // Filter resources by project allocation
   const filteredResources = useMemo(() => {

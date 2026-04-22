@@ -41,6 +41,8 @@ export default function Expenses() {
   const [editing, setEditing] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
+  useEffect(() => { loadConversionRates(); }, []);
+
   useEffect(() => {
     saveFilters("expenses", { search, project: filterProject, category: filterCategory, status: filterStatus, month: filterMonth });
   }, [search, filterProject, filterCategory, filterStatus, filterMonth]);

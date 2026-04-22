@@ -21,9 +21,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/currency";
 import {
   startOfMonth, endOfMonth, eachDayOfInterval, format, getDay, parse,
 } from "date-fns";
+
+const HOURS_PER_DAY = 8;
 
 const schema = z.object({
   resource_ids: z.array(z.string()).min(1, "Select at least one resource"),
@@ -35,6 +39,10 @@ const schema = z.object({
   description: z.string().max(500).optional(),
   skip_weekends: z.boolean().default(true),
   skip_existing: z.boolean().default(true),
+  override_rate: z.boolean().default(false),
+  bill_rate: z.coerce.number().min(0).optional(),
+  daily_rate: z.coerce.number().min(0).optional(),
+  currency: z.string().default("EUR"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -76,6 +84,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
       month: format(new Date(), "yyyy-MM"),
       hours: 8, is_billable: true, description: "",
       skip_weekends: true, skip_existing: true,
+      override_rate: false, bill_rate: 0, daily_rate: 0, currency: "EUR",
     },
   });
 
@@ -88,6 +97,7 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
         month: defaultMonth,
         hours: 8, is_billable: true, description: "",
         skip_weekends: true, skip_existing: true,
+        override_rate: false, bill_rate: 0, daily_rate: 0, currency: "EUR",
       });
       setSelectedDates(computeWorkingDays(defaultMonth, true));
     }
@@ -97,7 +107,24 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
   const watchMonth = form.watch("month");
   const watchSkipWeekends = form.watch("skip_weekends");
   const watchResourceIds = form.watch("resource_ids");
+  const watchOverrideRate = form.watch("override_rate");
+  const watchCurrency = form.watch("currency");
+  const watchBillRate = form.watch("bill_rate");
+  const watchDailyRate = form.watch("daily_rate");
+  const sym = CURRENCY_SYMBOLS[watchCurrency as Currency] || "€";
   const filteredPhases = phases.filter((p: any) => p.project_id === watchProjectId);
+
+  const [rateEditSource, setRateEditSource] = useState<"bill" | "daily" | null>(null);
+  useEffect(() => {
+    if (rateEditSource === "bill" && watchBillRate != null) {
+      form.setValue("daily_rate", Number((watchBillRate * HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchBillRate, rateEditSource, form]);
+  useEffect(() => {
+    if (rateEditSource === "daily" && watchDailyRate != null) {
+      form.setValue("bill_rate", Number((watchDailyRate / HOURS_PER_DAY).toFixed(2)));
+    }
+  }, [watchDailyRate, rateEditSource, form]);
 
   // Filter resources by project allocation
   const filteredResources = useMemo(() => {
@@ -193,8 +220,11 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
 
       for (const rid of values.resource_ids) {
         const resource = resources.find((r: any) => r.id === rid);
-        const billRate = resource?.default_bill_rate != null ? Number(resource.default_bill_rate) : null;
-        const currency = resource?.currency || "EUR";
+        const useOverride = values.override_rate && values.bill_rate != null && values.bill_rate > 0;
+        const billRate = useOverride
+          ? Number(values.bill_rate)
+          : (resource?.default_bill_rate != null ? Number(resource.default_bill_rate) : null);
+        const currency = useOverride ? (values.currency || "EUR") : (resource?.currency || "EUR");
 
         const skipSet = existingByResource[rid] || new Set<string>();
         const newDates = dates.filter(d => !skipSet.has(d));
@@ -368,6 +398,59 @@ export function MonthlyTimeEntryDialog({ open, onOpenChange, resources, projects
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* Optional global bill rate override */}
+            <div className="space-y-3 rounded-md border p-3">
+              <FormField control={form.control} name="override_rate" render={({ field }) => (
+                <FormItem className="flex items-center gap-3">
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-0.5">
+                    <FormLabel className="mb-0">Override bill rate for all selected resources</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      If off, each resource uses its own default bill rate &amp; currency from profile.
+                    </p>
+                  </div>
+                </FormItem>
+              )} />
+
+              {watchOverrideRate && (
+                <>
+                  <FormField control={form.control} name="currency" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rate Currency</FormLabel>
+                      <FormControl>
+                        <CurrencySelect value={field.value} onValueChange={field.onChange} className="w-full" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField control={form.control} name="bill_rate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bill Rate ({sym}/hr)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field}
+                            onFocus={() => setRateEditSource("bill")} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="daily_rate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Daily Rate ({sym}/day)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field}
+                            onFocus={() => setRateEditSource("daily")} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="space-y-3">
               <FormField control={form.control} name="is_billable" render={({ field }) => (

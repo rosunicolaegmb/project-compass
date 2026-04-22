@@ -114,24 +114,20 @@ export default function Dashboard() {
 
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["dash-time"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("time_entries")
+    queryFn: () => fetchAllRows<any>(() =>
+      supabase.from("time_entries")
         .select("hours, cost_rate, bill_rate, is_billable, project_id, entry_date, approval_status, currency")
-        .is("deleted_at", null);
-      if (error) throw error;
-      return data;
-    },
+        .is("deleted_at", null)
+    ),
   });
 
   const { data: expenseEntries = [] } = useQuery({
     queryKey: ["dash-expenses"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("expense_entries")
+    queryFn: () => fetchAllRows<any>(() =>
+      supabase.from("expense_entries")
         .select("amount, project_id, expense_date, currency, description, category")
-        .is("deleted_at", null);
-      if (error) throw error;
-      return data;
-    },
+        .is("deleted_at", null)
+    ),
   });
 
   const { data: forecasts = [] } = useQuery({
@@ -158,42 +154,34 @@ export default function Dashboard() {
 
   const { data: monthlyCosts = [] } = useQuery({
     queryKey: ["dash-monthly-costs"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("resource_monthly_costs")
-        .select("resource_id, year, month, amount, overhead, currency");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchAllRows<any>(() =>
+      supabase.from("resource_monthly_costs")
+        .select("resource_id, year, month, amount, overhead, currency")
+    ),
   });
 
   const { data: projectMembers = [] } = useQuery({
     queryKey: ["dash-project-members"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("project_members")
-        .select("resource_id, project_id, allocation_percentage, is_primary, start_date, end_date");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchAllRows<any>(() =>
+      supabase.from("project_members")
+        .select("resource_id, project_id, allocation_percentage, is_primary, start_date, end_date")
+    ),
   });
 
   const { data: oneTimeRevenues = [] } = useQuery({
     queryKey: ["dash-one-time-revenues"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("one_time_revenues")
-        .select("project_id, revenue_month, amount, currency");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchAllRows<any>(() =>
+      supabase.from("one_time_revenues")
+        .select("project_id, revenue_month, amount, currency")
+    ),
   });
 
   const { data: generalExpenses = [] } = useQuery({
     queryKey: ["dash-general-expenses"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("general_expenses")
-        .select("amount, currency, year, month");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchAllRows<any>(() =>
+      supabase.from("general_expenses")
+        .select("amount, currency, year, month")
+    ),
   });
 
   // Detect missing conversion rates for current month
